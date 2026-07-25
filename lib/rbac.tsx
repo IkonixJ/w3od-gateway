@@ -8,6 +8,7 @@ export const ROLE_RANK: Record<UserRole, number> = {
   member: 0,
   moderator: 1,
   admin: 2,
+  super_admin: 3,
 };
 
 export function hasRole(actual: UserRole, required: UserRole): boolean {

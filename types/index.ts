@@ -1,4 +1,4 @@
-export type UserRole = 'member' | 'admin' | 'moderator';
+export type UserRole = 'member' | 'admin' | 'moderator' | 'super_admin';
 
 export type KycStatus = 'none' | 'pending' | 'verified' | 'rejected';
 

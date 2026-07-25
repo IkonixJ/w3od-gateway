@@ -1,26 +1,6 @@
 import { Tabs } from 'expo-router';
 import { StyleSheet, Platform, type ViewStyle } from 'react-native';
-import {
-  Wallet,
-  MessageSquare,
-  Megaphone,
-  GraduationCap,
-  CalendarDays,
-  Bell,
-  User,
-  ShieldAlert,
-  ShieldCheck,
-  Trophy,
-  FileText,
-  Award,
-  Users,
-  Gift,
-  Download,
-  KeyRound,
-  LifeBuoy,
-  BarChart3,
-  ScrollText,
-} from 'lucide-react-native';
+import { Wallet, MessageSquare, Megaphone, GraduationCap, CalendarDays, Bell, User, ShieldAlert, ShieldCheck, Trophy, FileText, Award, Users, Gift, Download, KeyRound, LifeBuoy, ChartBar as BarChart3, ScrollText } from 'lucide-react-native';
 
 import { useAuth } from '@/context/AuthProvider';
 import { hasRole } from '@/lib/rbac';

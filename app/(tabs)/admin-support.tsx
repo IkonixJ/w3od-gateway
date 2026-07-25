@@ -12,18 +12,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import {
-  ArrowLeft,
-  X,
-  Send,
-  Lock,
-  Clock,
-  Calendar,
-  MessageSquare,
-  Headphones,
-  CircleCheck as CheckCircle2,
-  AlertCircle,
-} from 'lucide-react-native';
+import { ArrowLeft, X, Send, Lock, Clock, Calendar, MessageSquare, Headphones, CircleCheck as CheckCircle2, CircleAlert as AlertCircle } from 'lucide-react-native';
 
 import {
   ScreenShell,

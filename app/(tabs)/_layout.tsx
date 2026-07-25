@@ -49,7 +49,7 @@ export default function TabLayout() {
         options={{
           title: 'Community',
           tabBarIcon: ({ color, size, focused }) => (
-            <Wallet color={color} size={size} strokeWidth={focused ? 2.4 : 2} />
+            <Users color={color} size={size} strokeWidth={focused ? 2.4 : 2} />
           ),
         }}
       />

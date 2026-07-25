@@ -13,6 +13,13 @@ import {
   Trophy,
   FileText,
   Award,
+  Users,
+  Gift,
+  Download,
+  KeyRound,
+  LifeBuoy,
+  BarChart3,
+  ScrollText,
 } from 'lucide-react-native';
 
 import { useAuth } from '@/context/AuthProvider';
@@ -24,6 +31,7 @@ import { NeonTabBar } from '@/components/dashboard/NeonTabBar';
 export default function TabLayout() {
   const { profile } = useAuth();
   const isAdmin = hasRole(profile?.role ?? 'member', 'admin');
+  const isSuperAdmin = profile?.role === 'super_admin';
 
   return (
     <Tabs
@@ -203,6 +211,86 @@ export default function TabLayout() {
             <Award color={color} size={size} strokeWidth={focused ? 2.4 : 2} />
           ),
           href: isAdmin ? null : undefined,
+        }}
+      />
+      <Tabs.Screen
+        name="admin-members"
+        options={{
+          title: 'Members',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Users color={color} size={size} strokeWidth={focused ? 2.4 : 2} />
+          ),
+          href: isAdmin ? null : undefined,
+        }}
+      />
+      <Tabs.Screen
+        name="admin-rewards"
+        options={{
+          title: 'Credit Rewards',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Gift color={color} size={size} strokeWidth={focused ? 2.4 : 2} />
+          ),
+          href: isAdmin ? null : undefined,
+        }}
+      />
+      <Tabs.Screen
+        name="admin-redemptions"
+        options={{
+          title: 'Redemptions',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Download color={color} size={size} strokeWidth={focused ? 2.4 : 2} />
+          ),
+          href: isAdmin ? null : undefined,
+        }}
+      />
+      <Tabs.Screen
+        name="admin-invites"
+        options={{
+          title: 'Invite Codes',
+          tabBarIcon: ({ color, size, focused }) => (
+            <KeyRound color={color} size={size} strokeWidth={focused ? 2.4 : 2} />
+          ),
+          href: isAdmin ? null : undefined,
+        }}
+      />
+      <Tabs.Screen
+        name="admin-announcements"
+        options={{
+          title: 'Announcements',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Megaphone color={color} size={size} strokeWidth={focused ? 2.4 : 2} />
+          ),
+          href: isAdmin ? null : undefined,
+        }}
+      />
+      <Tabs.Screen
+        name="admin-support"
+        options={{
+          title: 'Support',
+          tabBarIcon: ({ color, size, focused }) => (
+            <LifeBuoy color={color} size={size} strokeWidth={focused ? 2.4 : 2} />
+          ),
+          href: isAdmin ? null : undefined,
+        }}
+      />
+      <Tabs.Screen
+        name="admin-analytics"
+        options={{
+          title: 'Analytics',
+          tabBarIcon: ({ color, size, focused }) => (
+            <BarChart3 color={color} size={size} strokeWidth={focused ? 2.4 : 2} />
+          ),
+          href: isAdmin ? null : undefined,
+        }}
+      />
+      <Tabs.Screen
+        name="admin-audit"
+        options={{
+          title: 'Audit Logs',
+          tabBarIcon: ({ color, size, focused }) => (
+            <ScrollText color={color} size={size} strokeWidth={focused ? 2.4 : 2} />
+          ),
+          href: isSuperAdmin ? null : undefined,
         }}
       />
     </Tabs>

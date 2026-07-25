@@ -3,7 +3,7 @@ import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Mail, ArrowLeft, RotateCw } from 'lucide-react-native';
 
-import { ScreenShell, GlassCard, NeonButton, NeonText, OtpInput } from '@/components/ui';
+import { ScreenShell, GlassCard, NeonButton, NeonText, OtpInput, DevOtpHint } from '@/components/ui';
 import { W3ODLogo } from '@/components/brand/W3ODLogo';
 import { useAuth } from '@/context/AuthProvider';
 import { sendOtp } from '@/lib/auth-service';
@@ -81,6 +81,8 @@ export default function VerifyEmailScreen() {
           <NeonText variant="body" weight="semiBold" tone="cyan" style={styles.email}>
             {pendingEmail}
           </NeonText>
+
+          <DevOtpHint purpose="signup" email={pendingEmail} />
 
           <OtpInput
             value={code}

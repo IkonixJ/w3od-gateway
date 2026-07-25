@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable, type ViewStyle } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -17,6 +17,7 @@ interface BadgeProps {
   icon?: ReactNode;
   onPress?: () => void;
   dot?: boolean;
+  style?: ViewStyle;
 }
 
 const TONE_STYLE: Record<BadgeTone, { bg: string; border: string; text: string }> = {
@@ -41,7 +42,7 @@ const DOT_COLOR: Record<BadgeTone, string> = {
   muted: Palette.textTertiary,
 };
 
-export function Badge({ children, tone = 'cyan', icon, onPress, dot = false }: BadgeProps) {
+export function Badge({ children, tone = 'cyan', icon, onPress, dot = false, style }: BadgeProps) {
   const s = TONE_STYLE[tone];
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({
@@ -58,7 +59,7 @@ export function Badge({ children, tone = 'cyan', icon, onPress, dot = false }: B
   };
 
   const Inner = (
-    <View style={[styles.badge, { backgroundColor: s.bg, borderColor: s.border }]}>
+    <View style={[styles.badge, { backgroundColor: s.bg, borderColor: s.border }, style]}>
       {dot && <View style={[styles.dot, { backgroundColor: DOT_COLOR[tone] }]} />}
       {icon}
       <Text style={[styles.text, { color: s.text }]}>{children}</Text>
@@ -67,7 +68,7 @@ export function Badge({ children, tone = 'cyan', icon, onPress, dot = false }: B
 
   if (onPress) {
     return (
-      <Animated.View style={animatedStyle}>
+      <Animated.View style={[animatedStyle, style]}>
         <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut} onPress={onPress}>
           {Inner}
         </Pressable>

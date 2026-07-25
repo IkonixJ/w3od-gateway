@@ -16,7 +16,10 @@ import {
   verifyOtp,
   markEmailVerified,
   checkUsernameTaken,
+  changeUsername,
   consumeInviteCode,
+  refundInviteCode,
+  setBiometricEnabled,
   isTrustedDevice,
   trustDevice,
   logLoginAttempt,
@@ -80,6 +83,10 @@ export interface AuthState {
   createPin: (pin: string) => Promise<{ error: string | null }>;
   verifyTransactionPin: (pin: string) => Promise<{ valid: boolean; locked: boolean }>;
   resetPinLock: () => Promise<void>;
+
+  // Profile settings
+  toggleBiometric: (enabled: boolean) => Promise<{ error: string | null }>;
+  updateUsername: (username: string) => Promise<{ error: string | null }>;
 
   // Session
   touchActivity: () => void;
@@ -344,7 +351,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (error) {
           // Refund the invite code on failure
-          await supabase.rpc('refund_invite_code', { p_code: data.inviteCode }).then(() => {});
+          await refundInviteCode(data.inviteCode);
           return { error: humanizeError(error.message) ?? 'Registration failed.' };
         }
 
@@ -457,27 +464,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const valid = await verifyPin(pin, profile.pin_hash);
       if (valid) {
-        // Reset failed attempts
-        await supabase
-          .from('profiles')
-          .update({ pin_failed_attempts: 0 })
-          .eq('id', profile.id);
+        // Reset failed attempts via RPC (guard blocks direct self-update)
+        await supabase.rpc('reset_pin_lock', { p_user_id: profile.id });
+        await loadProfile(profile.id);
         return { valid: true, locked: false };
       }
 
-      // Increment failures
-      const newAttempts = profile.pin_failed_attempts + 1;
-      const shouldLock = newAttempts >= PIN_MAX_ATTEMPTS;
-      await supabase
-        .from('profiles')
-        .update({
-          pin_failed_attempts: newAttempts,
-          pin_locked: shouldLock,
-        })
-        .eq('id', profile.id);
-
+      // Increment failures via RPC (guard blocks direct self-update)
+      const { data: locked } = await supabase.rpc('increment_pin_failure', {
+        p_user_id: profile.id,
+      });
       await loadProfile(profile.id);
-      return { valid: false, locked: shouldLock };
+      return { valid: false, locked: !!locked };
     },
     [profile, loadProfile]
   );
@@ -485,12 +483,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ─── Reset PIN Lock ───────────────────────────────────────────────────────
   const resetPinLock = useCallback(async () => {
     if (!profile) return;
-    await supabase
-      .from('profiles')
-      .update({ pin_failed_attempts: 0, pin_locked: false })
-      .eq('id', profile.id);
+    await supabase.rpc('reset_pin_lock', { p_user_id: profile.id });
     await loadProfile(profile.id);
   }, [profile, loadProfile]);
+
+  // ─── Toggle Biometric Auth ────────────────────────────────────────────────
+  const toggleBiometric = useCallback<AuthState['toggleBiometric']>(
+    async (enabled) => {
+      if (!session?.user.id) return { error: 'No active session.' };
+      setLoading(true);
+      try {
+        await setBiometricEnabled(session.user.id, enabled);
+        await loadProfile(session.user.id);
+        return { error: null };
+      } catch {
+        return { error: 'Failed to update biometric setting.' };
+      } finally {
+        setLoading(false);
+      }
+    },
+    [session, loadProfile]
+  );
+
+  // ─── Change Username ──────────────────────────────────────────────────────
+  const updateUsername = useCallback<AuthState['updateUsername']>(
+    async (username) => {
+      if (!session?.user.id) return { error: 'No active session.' };
+      setLoading(true);
+      try {
+        const ok = await changeUsername(session.user.id, username);
+        if (!ok) return { error: 'That username is already taken or invalid.' };
+        await loadProfile(session.user.id);
+        return { error: null };
+      } finally {
+        setLoading(false);
+      }
+    },
+    [session, loadProfile]
+  );
 
   // ─── Sign Out ─────────────────────────────────────────────────────────────
   const signOut = useCallback(async () => {
@@ -540,6 +570,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       createPin,
       verifyTransactionPin,
       resetPinLock,
+      toggleBiometric,
+      updateUsername,
       touchActivity,
     }),
     [
@@ -547,7 +579,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       pendingEmail, pendingSignUp, pinRequired, deviceFingerprint,
       signIn, completeDeviceVerification, signUp, verifyEmail,
       requestPasswordReset, signOut, refreshProfile,
-      createPin, verifyTransactionPin, resetPinLock, touchActivity,
+      createPin, verifyTransactionPin, resetPinLock,
+      toggleBiometric, updateUsername, touchActivity,
     ]
   );
 

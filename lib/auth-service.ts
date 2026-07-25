@@ -11,7 +11,34 @@ const ANON_HEADERS: Record<string, string> = {
 
 export type OtpPurpose = 'signup' | 'login' | 'reset';
 
-export async function sendOtp(email: string, purpose: OtpPurpose): Promise<{ error: string | null }> {
+// In-memory store for the dev OTP code returned by the edge function when no
+// email provider is configured. The verify screens read this to display the
+// code so the auth flow is testable in the Bolt preview. Cleared on read.
+let lastDevOtp: { code: string; purpose: OtpPurpose; email: string; at: number } | null = null;
+
+export function getLastDevOtp(): { code: string; purpose: OtpPurpose; email: string } | null {
+  if (!lastDevOtp) return null;
+  // Expire after 10 minutes (matches OTP expiry).
+  if (Date.now() - lastDevOtp.at > 10 * 60 * 1000) {
+    lastDevOtp = null;
+    return null;
+  }
+  return { code: lastDevOtp.code, purpose: lastDevOtp.purpose, email: lastDevOtp.email };
+}
+
+export function clearLastDevOtp(): void {
+  lastDevOtp = null;
+}
+
+export interface SendOtpResult {
+  error: string | null;
+  // Returned only in development (edge function logs + returns dev_code).
+  // Used to surface the code in the UI so the flow is testable without an
+  // email provider. In production this field is absent.
+  devCode: string | null;
+}
+
+export async function sendOtp(email: string, purpose: OtpPurpose): Promise<SendOtpResult> {
   try {
     const res = await fetch(OTP_FUNCTION_URL, {
       method: 'POST',
@@ -20,11 +47,20 @@ export async function sendOtp(email: string, purpose: OtpPurpose): Promise<{ err
     });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      return { error: body.error || 'Failed to send verification code.' };
+      return { error: body.error || 'Failed to send verification code.', devCode: null };
     }
-    return { error: null };
+    const body = await res.json().catch(() => ({}));
+    if (body.dev_code) {
+      lastDevOtp = {
+        code: String(body.dev_code),
+        purpose,
+        email: email.toLowerCase(),
+        at: Date.now(),
+      };
+    }
+    return { error: null, devCode: body.dev_code ?? null };
   } catch {
-    return { error: 'Network error. Please try again.' };
+    return { error: 'Network error. Please try again.', devCode: null };
   }
 }
 
@@ -59,12 +95,29 @@ export async function checkUsernameTaken(username: string): Promise<boolean> {
   return !!data;
 }
 
+export async function changeUsername(userId: string, username: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('change_username', {
+    p_user_id: userId,
+    p_username: username,
+  });
+  if (error) return false;
+  return !!data;
+}
+
 export async function consumeInviteCode(code: string): Promise<boolean> {
   const { data, error } = await supabase.rpc('consume_invite_code', {
     p_code: code,
   });
   if (error) return false;
   return !!data;
+}
+
+export async function refundInviteCode(code: string): Promise<void> {
+  await supabase.rpc('refund_invite_code', { p_code: code });
+}
+
+export async function setBiometricEnabled(userId: string, enabled: boolean): Promise<void> {
+  await supabase.rpc('set_biometric_enabled', { p_user_id: userId, p_enabled: enabled });
 }
 
 export async function resetPassword(
@@ -109,6 +162,26 @@ export async function trustDevice(
   );
 }
 
+export async function listTrustedDevices(userId: string): Promise<
+  { id: string; device_name: string | null; trusted_at: string }[]
+> {
+  const { data, error } = await supabase
+    .from('trusted_devices')
+    .select('id, device_name, trusted_at')
+    .eq('user_id', userId)
+    .order('trusted_at', { ascending: false });
+  if (error || !data) return [];
+  return data;
+}
+
+export async function removeTrustedDevice(userId: string, deviceId: string): Promise<void> {
+  await supabase
+    .from('trusted_devices')
+    .delete()
+    .eq('id', deviceId)
+    .eq('user_id', userId);
+}
+
 export async function logLoginAttempt(
   userId: string | null,
   email: string,
@@ -123,56 +196,30 @@ export async function logLoginAttempt(
   });
 }
 
-export async function getLoginLockStatus(email: string): Promise<{ locked: boolean; lockedUntil: Date | null }> {
-  const { data } = await supabase
-    .from('profiles')
-    .select('login_locked_until, login_failed_attempts')
-    .eq('email', email.toLowerCase())
-    .maybeSingle();
-
+export async function getLoginLockStatus(
+  email: string
+): Promise<{ locked: boolean; lockedUntil: Date | null }> {
+  const { data } = await supabase.rpc('get_login_lock_status', { p_email: email });
   if (!data) return { locked: false, lockedUntil: null };
-
-  const lockedUntil = data.login_locked_until ? new Date(data.login_locked_until) : null;
-  const locked = lockedUntil ? lockedUntil > new Date() : false;
-
+  const lockedUntil = data.locked_until ? new Date(data.locked_until) : null;
+  const locked = !!data.locked;
   return { locked, lockedUntil };
 }
 
-export async function incrementLoginFailures(email: string): Promise<{ attempts: number; locked: boolean }> {
-  // Fetch current attempts
-  const { data } = await supabase
-    .from('profiles')
-    .select('login_failed_attempts, login_locked_until')
-    .eq('email', email.toLowerCase())
-    .maybeSingle();
-
-  const current = (data?.login_failed_attempts ?? 0) + 1;
-  const shouldLock = current >= 5;
-  const lockUntil = shouldLock ? new Date(Date.now() + 15 * 60 * 1000).toISOString() : null;
-
-  await supabase
-    .from('profiles')
-    .update({
-      login_failed_attempts: current,
-      login_locked_until: lockUntil,
-    })
-    .eq('email', email.toLowerCase());
-
-  return { attempts: current, locked: shouldLock };
+export async function incrementLoginFailures(
+  email: string
+): Promise<{ attempts: number; locked: boolean }> {
+  const { data } = await supabase.rpc('increment_login_failures', { p_email: email });
+  if (!data) return { attempts: 0, locked: false };
+  return { attempts: data.attempts ?? 0, locked: !!data.locked };
 }
 
 export async function resetLoginFailures(email: string): Promise<void> {
-  await supabase
-    .from('profiles')
-    .update({ login_failed_attempts: 0, login_locked_until: null })
-    .eq('email', email.toLowerCase());
+  await supabase.rpc('reset_login_failures', { p_email: email });
 }
 
 export async function updateLastActive(userId: string): Promise<void> {
-  await supabase
-    .from('profiles')
-    .update({ last_active_at: new Date().toISOString() })
-    .eq('id', userId);
+  await supabase.rpc('update_last_active', { p_user_id: userId });
 }
 
 export async function getLastActive(userId: string): Promise<Date | null> {

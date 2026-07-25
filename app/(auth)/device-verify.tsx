@@ -3,7 +3,7 @@ import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Smartphone, ArrowLeft, RotateCw } from 'lucide-react-native';
 
-import { ScreenShell, GlassCard, NeonButton, NeonText, OtpInput } from '@/components/ui';
+import { ScreenShell, GlassCard, NeonButton, NeonText, OtpInput, DevOtpHint } from '@/components/ui';
 import { W3ODLogo } from '@/components/brand/W3ODLogo';
 import { useAuth } from '@/context/AuthProvider';
 import { sendOtp } from '@/lib/auth-service';
@@ -82,6 +82,8 @@ export default function DeviceVerifyScreen() {
             For your security, enter the verification code sent to your email to
             trust this device and complete sign in.
           </NeonText>
+
+          <DevOtpHint purpose="login" email={pendingEmail} />
 
           <OtpInput
             value={code}

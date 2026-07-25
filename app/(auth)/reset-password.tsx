@@ -10,6 +10,7 @@ import {
   NeonText,
   OtpInput,
   NeonInput,
+  DevOtpHint,
 } from '@/components/ui';
 import { W3ODLogo } from '@/components/brand/W3ODLogo';
 import { useAuth } from '@/context/AuthProvider';
@@ -136,6 +137,8 @@ export default function ResetPasswordScreen() {
               <NeonText variant="body" weight="semiBold" tone="magenta" style={styles.email}>
                 {pendingEmail}
               </NeonText>
+
+              <DevOtpHint purpose="reset" email={pendingEmail} />
 
               <OtpInput
                 value={code}

@@ -11,3 +11,4 @@ export { Avatar } from './Avatar';
 export { ScreenShell } from './ScreenShell';
 export { OtpInput } from './OtpInput';
 export { PinInput } from './PinInput';
+export { DevOtpHint } from './DevOtpHint';

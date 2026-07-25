@@ -9,9 +9,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import {
-  ArrowLeft, TrendingUp, Gift, Megaphone, RefreshCw, Users, BarChart3,
-} from 'lucide-react-native';
+import { ArrowLeft, TrendingUp, Gift, Megaphone, RefreshCw, Users, ChartBar as BarChart3 } from 'lucide-react-native';
 
 import { ScreenShell, GlassCard, NeonText, Divider } from '@/components/ui';
 import { RequireRole } from '@/lib/rbac';

@@ -9,9 +9,10 @@ import {
   Platform,
   ActivityIndicator,
   RefreshControl,
+  Text,
 } from 'react-native';
-import { useRouter } from 'expo-router';
-import { ArrowLeft, ShieldAlert, ShieldCheck, CircleCheck as CheckCircle2, Circle as XCircle, Clock, IdCard, Calendar, User, Mail, Check, X, ChevronRight, FileText } from 'lucide-react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { ArrowLeft, Users, Check, X, CircleCheck as CheckCircle2, Circle as XCircle, Clock, Gift, Zap, FileText, Link as LinkIcon, ExternalLink, Award } from 'lucide-react-native';
 
 import {
   ScreenShell,
@@ -25,32 +26,31 @@ import {
 } from '@/components/ui';
 import { RequireRole } from '@/lib/rbac';
 import {
-  getPendingKycSubmissions,
-  reviewKyc,
-  kycStatusLabel,
-  kycStatusTone,
-  formatDate,
-  formatDateTime,
-} from '@/lib/kyc-service';
+  getCampaignParticipations,
+  reviewSubmission,
+  submissionStatusLabel,
+  submissionStatusTone,
+} from '@/lib/campaign-service';
 import { Palette, Typography, Spacing, Radii } from '@/design/tokens';
-import { wideCardMaxWidth, cardMaxWidth, screenPadding } from '@/design/responsive';
-import type { PendingKycSubmission } from '@/types/kyc';
+import { wideCardMaxWidth, screenPadding } from '@/design/responsive';
+import type { CampaignParticipation } from '@/types/campaigns';
 
-export default function AdminKycScreen() {
+export default function AdminCampaignReviewScreen() {
   return (
     <RequireRole role="admin" fallback="/(tabs)">
-      <AdminKycContent />
+      <AdminCampaignReviewContent />
     </RequireRole>
   );
 }
 
-function AdminKycContent() {
+function AdminCampaignReviewContent() {
   const router = useRouter();
-  const [submissions, setSubmissions] = useState<PendingKycSubmission[]>([]);
+  const { id } = useLocalSearchParams<{ id: string }>();
+  const [submissions, setSubmissions] = useState<CampaignParticipation[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selected, setSelected] = useState<PendingKycSubmission | null>(null);
   const [reviewModal, setReviewModal] = useState(false);
+  const [selected, setSelected] = useState<CampaignParticipation | null>(null);
   const [decision, setDecision] = useState<'approved' | 'rejected'>('approved');
   const [reason, setReason] = useState('');
   const [reviewing, setReviewing] = useState(false);
@@ -58,11 +58,12 @@ function AdminKycContent() {
   const [reviewSuccess, setReviewSuccess] = useState(false);
 
   const loadData = useCallback(async () => {
-    const data = await getPendingKycSubmissions();
+    if (!id) return;
+    const data = await getCampaignParticipations(id);
     setSubmissions(data);
     setLoading(false);
     setRefreshing(false);
-  }, []);
+  }, [id]);
 
   useEffect(() => {
     loadData();
@@ -73,7 +74,7 @@ function AdminKycContent() {
     loadData();
   }, [loadData]);
 
-  const openReview = (sub: PendingKycSubmission, dec: 'approved' | 'rejected') => {
+  const openReview = (sub: CampaignParticipation, dec: 'approved' | 'rejected') => {
     setSelected(sub);
     setDecision(dec);
     setReason(sub.rejection_reason ?? '');
@@ -85,7 +86,7 @@ function AdminKycContent() {
     if (!selected) return;
     setReviewing(true);
     setReviewError(null);
-    const result = await reviewKyc(selected.id, decision, reason);
+    const result = await reviewSubmission(selected.id, decision, reason);
     setReviewing(false);
     if (!result.success) {
       setReviewError(result.error ?? 'Review failed.');
@@ -97,8 +98,8 @@ function AdminKycContent() {
     loadData();
   };
 
-  const pendingCount = submissions.filter((s) => s.status === 'pending').length;
-  const reviewedCount = submissions.filter((s) => s.status !== 'pending').length;
+  const pendingCount = submissions.filter((s) => s.submission_status === 'submitted').length;
+  const approvedCount = submissions.filter((s) => s.submission_status === 'approved').length;
 
   return (
     <ScreenShell variant="deep" safeArea={false}>
@@ -106,21 +107,16 @@ function AdminKycContent() {
         contentContainerStyle={styles.scroll}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={Palette.neonAmber}
-            colors={[Palette.neonAmber]}
-          />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Palette.neonLime} />
         }
       >
         {/* Header */}
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} hitSlop={10}>
-            <ArrowLeft color={Palette.neonAmber} size={22} />
+            <ArrowLeft color={Palette.neonLime} size={22} />
           </Pressable>
-          <NeonText variant="display" weight="bold" tone="amber" style={styles.title}>
-            KYC REVIEW
+          <NeonText variant="display" weight="bold" tone="lime" style={styles.title}>
+            SUBMISSIONS
           </NeonText>
           <View style={{ width: 22 }} />
         </View>
@@ -137,138 +133,173 @@ function AdminKycContent() {
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statBox}>
-            <NeonText variant="display" weight="bold" tone="cyan" style={styles.statValue}>
-              {reviewedCount}
+            <NeonText variant="display" weight="bold" tone="lime" style={styles.statValue}>
+              {approvedCount}
             </NeonText>
             <NeonText variant="body" tone="muted" style={styles.statLabel}>
-              REVIEWED
+              APPROVED
+            </NeonText>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statBox}>
+            <NeonText variant="display" weight="bold" tone="cyan" style={styles.statValue}>
+              {submissions.length}
+            </NeonText>
+            <NeonText variant="body" tone="muted" style={styles.statLabel}>
+              TOTAL
             </NeonText>
           </View>
         </View>
 
-        {/* Success toast */}
         {reviewSuccess && (
           <View style={styles.successToast}>
             <CheckCircle2 color={Palette.neonLime} size={18} strokeWidth={2.5} />
             <NeonText variant="body" weight="semiBold" tone="lime">
-              KYC review submitted
+              Review submitted — reward credited
             </NeonText>
           </View>
         )}
 
-        {/* Submissions list */}
+        {/* Submissions */}
         {loading ? (
           <View style={styles.loadingWrap}>
-            <ActivityIndicator size="large" color={Palette.neonAmber} />
+            <ActivityIndicator size="large" color={Palette.neonLime} />
           </View>
         ) : submissions.length === 0 ? (
-          <GlassCard tone="amber" padding={Spacing['6']} style={styles.emptyCard}>
-            <ShieldCheck color={Palette.textTertiary} size={40} />
+          <GlassCard tone="lime" padding={Spacing['6']} style={styles.emptyCard}>
+            <Users color={Palette.textTertiary} size={40} />
             <NeonText variant="heading" weight="medium" tone="muted" style={styles.emptyTitle}>
-              No KYC submissions
+              No submissions yet
             </NeonText>
             <NeonText variant="body" tone="muted" style={styles.emptySub}>
-              Member KYC submissions will appear here for review.
+              Member submissions will appear here for review.
             </NeonText>
           </GlassCard>
         ) : (
           submissions.map((sub) => (
             <GlassCard
               key={sub.id}
-              tone={kycStatusTone(sub.status)}
+              tone={submissionStatusTone(sub.submission_status)}
               gradientBorder
-              padding={Spacing['5']}
+              padding={Spacing['4']}
               style={styles.subCard}
             >
-              {/* Header row */}
               <View style={styles.subHeader}>
-                <Avatar
-                  uri={sub.avatar_url}
-                  displayName={sub.display_name ?? sub.username}
-                  size="md"
-                />
+                <Avatar uri={sub.avatar_url} displayName={sub.display_name ?? sub.username} size="sm" />
                 <View style={styles.subMeta}>
-                  <NeonText variant="heading" weight="semiBold" tone="cyan" style={styles.subName}>
+                  <NeonText variant="heading" weight="semiBold" tone="lime" style={styles.subName}>
                     {sub.display_name ?? sub.username ?? 'Member'}
                   </NeonText>
                   {sub.username && (
-                    <NeonText variant="body" weight="semiBold" tone="magenta" style={styles.subUsername}>
+                    <NeonText variant="body" tone="magenta" style={styles.subUsername}>
                       @{sub.username}
                     </NeonText>
                   )}
-                  <NeonText variant="body" tone="muted" style={styles.subEmail}>
-                    {sub.email}
-                  </NeonText>
                 </View>
-                <Badge tone={kycStatusTone(sub.status)}>
-                  {kycStatusLabel(sub.status).toUpperCase()}
+                <Badge tone={submissionStatusTone(sub.submission_status)}>
+                  {submissionStatusLabel(sub.submission_status).toUpperCase()}
                 </Badge>
               </View>
 
               <Divider tone="white" />
 
-              {/* KYC details */}
-              <View style={styles.subDetails}>
-                <DetailRow
-                  icon={<IdCard color={Palette.neonCyan} size={14} />}
-                  label="NIN"
-                  value={sub.nin}
-                />
-                <DetailRow
-                  icon={<User color={Palette.neonCyan} size={14} />}
-                  label="Legal Name"
-                  value={sub.full_name}
-                />
-                <DetailRow
-                  icon={<Calendar color={Palette.neonCyan} size={14} />}
-                  label="Date of Birth"
-                  value={formatDate(sub.date_of_birth)}
-                />
-                <DetailRow
-                  icon={<Clock color={Palette.neonCyan} size={14} />}
-                  label="Submitted"
-                  value={formatDateTime(sub.submitted_at)}
-                />
-                {sub.reviewed_at && (
-                  <DetailRow
-                    icon={<ShieldCheck color={Palette.neonCyan} size={14} />}
-                    label="Reviewed"
-                    value={formatDateTime(sub.reviewed_at)}
-                  />
-                )}
-              </View>
+              {/* Proof */}
+              {sub.proof_url && (
+                <View style={styles.proofSection}>
+                  <View style={styles.proofHeader}>
+                    {sub.proof_type === 'link' ? (
+                      <LinkIcon color={Palette.neonCyan} size={14} />
+                    ) : (
+                      <FileText color={Palette.neonCyan} size={14} />
+                    )}
+                    <NeonText variant="body" weight="semiBold" tone="cyan" style={styles.proofLabel}>
+                      PROOF ({(sub.proof_type ?? 'file').toUpperCase()})
+                    </NeonText>
+                  </View>
+                  {sub.proof_type === 'link' ? (
+                    <Pressable
+                      onPress={() => {
+                        if (Platform.OS === 'web' && sub.proof_url) {
+                          window.open(sub.proof_url, '_blank');
+                        }
+                      }}
+                      style={styles.proofLink}
+                    >
+                      <Text style={styles.proofLinkText} numberOfLines={1}>
+                        {sub.proof_url}
+                      </Text>
+                      <ExternalLink color={Palette.neonCyan} size={12} />
+                    </Pressable>
+                  ) : (
+                    <View style={styles.proofFile}>
+                      <FileText color={Palette.neonCyan} size={16} />
+                      <Text style={styles.proofFileText} numberOfLines={1}>
+                        {sub.proof_type} file uploaded
+                      </Text>
+                    </View>
+                  )}
+                  {sub.proof_note && (
+                    <View style={styles.proofNote}>
+                      <NeonText variant="body" tone="muted" style={styles.proofNoteText}>
+                        "{sub.proof_note}"
+                      </NeonText>
+                    </View>
+                  )}
+                </View>
+              )}
 
-              {/* Rejection reason (if rejected) */}
               {sub.rejection_reason && (
-                <View style={styles.reasonBox}>
-                  <ShieldAlert color={Palette.neonRose} size={14} />
-                  <NeonText variant="body" tone="muted" style={styles.reasonText}>
+                <View style={styles.rejectionBox}>
+                  <XCircle color={Palette.neonRose} size={14} />
+                  <NeonText variant="body" tone="muted" style={styles.rejectionText}>
                     {sub.rejection_reason}
                   </NeonText>
                 </View>
               )}
 
+              {sub.submitted_at && (
+                <View style={styles.submittedAt}>
+                  <Clock color={Palette.textTertiary} size={12} />
+                  <NeonText variant="body" tone="muted" style={styles.submittedAtText}>
+                    Submitted {new Date(sub.submitted_at).toLocaleString()}
+                  </NeonText>
+                </View>
+              )}
+
               {/* Actions */}
-              {sub.status === 'pending' && (
+              {sub.submission_status === 'submitted' && (
                 <View style={styles.subActions}>
-                  <NeonButton
-                    variant="danger"
-                    leftIcon={<X color="#FFFFFF" size={16} />}
-                    onPress={() => openReview(sub, 'rejected')}
-                    style={styles.flex1}
-                  >
-                    Reject
-                  </NeonButton>
+                  <View style={styles.flex1}>
+                    <NeonButton
+                      variant="danger"
+                      leftIcon={<X color="#FFFFFF" size={16} />}
+                      onPress={() => openReview(sub, 'rejected')}
+                      fullWidth
+                      size="sm"
+                    >
+                      Reject
+                    </NeonButton>
+                  </View>
                   <View style={styles.flex1}>
                     <NeonButton
                       variant="success"
                       leftIcon={<Check color="#021810" size={16} />}
                       onPress={() => openReview(sub, 'approved')}
                       fullWidth
+                      size="sm"
                     >
-                      Approve
+                      Approve & Credit
                     </NeonButton>
                   </View>
+                </View>
+              )}
+
+              {sub.reward_credited && (
+                <View style={styles.creditedNotice}>
+                  <Award color={Palette.neonLime} size={14} />
+                  <NeonText variant="body" weight="semiBold" tone="lime" style={styles.creditedText}>
+                    Reward credited
+                  </NeonText>
                 </View>
               )}
             </GlassCard>
@@ -297,10 +328,8 @@ function AdminKycContent() {
                   style={[
                     styles.modalIconWrap,
                     {
-                      backgroundColor:
-                        decision === 'approved' ? 'rgba(0,255,156,0.1)' : 'rgba(255,45,111,0.1)',
-                      borderColor:
-                        decision === 'approved' ? Palette.neonLime : Palette.neonRose,
+                      backgroundColor: decision === 'approved' ? 'rgba(0,255,156,0.1)' : 'rgba(255,45,111,0.1)',
+                      borderColor: decision === 'approved' ? Palette.neonLime : Palette.neonRose,
                     },
                   ]}
                 >
@@ -311,7 +340,7 @@ function AdminKycContent() {
                   )}
                 </View>
                 <NeonText variant="heading" weight="semiBold" tone={decision === 'approved' ? 'lime' : 'rose'}>
-                  {decision === 'approved' ? 'APPROVE KYC' : 'REJECT KYC'}
+                  {decision === 'approved' ? 'APPROVE & CREDIT' : 'REJECT SUBMISSION'}
                 </NeonText>
               </View>
               <Pressable onPress={() => setReviewModal(false)} hitSlop={10} disabled={reviewing}>
@@ -321,26 +350,17 @@ function AdminKycContent() {
 
             {selected && (
               <View style={styles.modalSubInfo}>
-                <Avatar
-                  uri={selected.avatar_url}
-                  displayName={selected.display_name ?? selected.username}
-                  size="sm"
-                />
-                <View style={styles.modalSubMeta}>
-                  <NeonText variant="body" weight="semiBold" tone="cyan">
-                    {selected.display_name ?? selected.username}
-                  </NeonText>
-                  <NeonText variant="body" tone="muted" style={styles.modalSubEmail}>
-                    {selected.email}
-                  </NeonText>
-                </View>
+                <Avatar uri={selected.avatar_url} displayName={selected.display_name ?? selected.username} size="xs" />
+                <NeonText variant="body" weight="semiBold" tone="cyan">
+                  {selected.display_name ?? selected.username}
+                </NeonText>
               </View>
             )}
 
             <NeonText variant="body" tone="muted" style={styles.modalSub}>
               {decision === 'approved'
-                ? 'This member will be verified and can access all wallet features.'
-                : 'The member will be notified with your reason and can resubmit corrected information.'}
+                ? 'The member will receive W3OD + XP, a transaction record, a notification, and a reward receipt.'
+                : 'The member will be notified with your reason and can resubmit corrected proof.'}
             </NeonText>
 
             {decision === 'rejected' && (
@@ -395,28 +415,6 @@ function AdminKycContent() {
   );
 }
 
-function DetailRow({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <View style={styles.detailRow}>
-      <View style={styles.detailIconWrap}>{icon}</View>
-      <NeonText variant="body" tone="muted" style={styles.detailLabel}>
-        {label}
-      </NeonText>
-      <NeonText variant="body" weight="semiBold" tone="cyan" style={styles.detailValue}>
-        {value}
-      </NeonText>
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   scroll: {
     flexGrow: 1,
@@ -453,7 +451,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.08)',
   },
   statValue: {
-    fontSize: Typography.sizes.xl,
+    fontSize: Typography.sizes.lg,
   },
   statLabel: {
     fontSize: Typography.sizes.xs,
@@ -500,39 +498,61 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   subName: {
-    fontSize: Typography.sizes.base,
+    fontSize: Typography.sizes.sm,
   },
   subUsername: {
     fontSize: Typography.sizes.xs,
   },
-  subEmail: {
-    fontSize: Typography.sizes.xs,
-  },
-  subDetails: {
+  proofSection: {
     gap: Spacing['2'],
   },
-  detailRow: {
+  proofHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing['2'],
   },
-  detailIconWrap: {
-    width: 24,
-    height: 24,
-    borderRadius: Radii.xs,
-    backgroundColor: Palette.glass300,
+  proofLabel: {
+    fontSize: Typography.sizes.xs,
+    letterSpacing: Typography.letterSpacings.wide,
+  },
+  proofLink: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: Spacing['2'],
+    backgroundColor: 'rgba(0,240,255,0.08)',
+    borderRadius: Radii.sm,
+    padding: Spacing['2'],
   },
-  detailLabel: {
-    fontSize: Typography.sizes.xs,
+  proofLinkText: {
     flex: 1,
-  },
-  detailValue: {
+    fontFamily: Typography.families.bodyRegular,
     fontSize: Typography.sizes.xs,
-    textAlign: 'right',
+    color: Palette.neonCyan,
   },
-  reasonBox: {
+  proofFile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing['2'],
+    backgroundColor: 'rgba(0,240,255,0.08)',
+    borderRadius: Radii.sm,
+    padding: Spacing['2'],
+  },
+  proofFileText: {
+    fontFamily: Typography.families.bodyRegular,
+    fontSize: Typography.sizes.xs,
+    color: Palette.textSecondary,
+  },
+  proofNote: {
+    backgroundColor: Palette.glass300,
+    borderRadius: Radii.sm,
+    padding: Spacing['2'],
+  },
+  proofNoteText: {
+    fontSize: Typography.sizes.xs,
+    lineHeight: 16,
+    fontStyle: 'italic',
+  },
+  rejectionBox: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: Spacing['2'],
@@ -542,10 +562,18 @@ const styles = StyleSheet.create({
     borderRadius: Radii.md,
     padding: Spacing['3'],
   },
-  reasonText: {
+  rejectionText: {
     flex: 1,
     fontSize: Typography.sizes.xs,
     lineHeight: 16,
+  },
+  submittedAt: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing['1'],
+  },
+  submittedAtText: {
+    fontSize: Typography.sizes.xs,
   },
   subActions: {
     flexDirection: 'row',
@@ -554,8 +582,19 @@ const styles = StyleSheet.create({
   flex1: {
     flex: 1,
   },
+  creditedNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing['2'],
+    backgroundColor: 'rgba(0,255,156,0.08)',
+    borderRadius: Radii.sm,
+    padding: Spacing['2'],
+  },
+  creditedText: {
+    fontSize: Typography.sizes.xs,
+  },
   footerSpace: {
-    height: Spacing['4'],
+    height: Spacing['8'],
   },
   // Modal
   modalOverlay: {
@@ -595,17 +634,10 @@ const styles = StyleSheet.create({
   modalSubInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing['3'],
+    gap: Spacing['2'],
     backgroundColor: Palette.glass300,
     borderRadius: Radii.md,
-    padding: Spacing['3'],
-  },
-  modalSubMeta: {
-    flex: 1,
-    gap: 2,
-  },
-  modalSubEmail: {
-    fontSize: Typography.sizes.xs,
+    padding: Spacing['2'],
   },
   modalSub: {
     fontSize: Typography.sizes.sm,

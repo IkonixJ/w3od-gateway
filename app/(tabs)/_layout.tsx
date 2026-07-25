@@ -10,6 +10,9 @@ import {
   User,
   ShieldAlert,
   ShieldCheck,
+  Trophy,
+  FileText,
+  Award,
 } from 'lucide-react-native';
 
 import { useAuth } from '@/context/AuthProvider';
@@ -148,6 +151,56 @@ export default function TabLayout() {
           title: 'KYC Review',
           tabBarIcon: ({ color, size, focused }) => (
             <ShieldAlert color={color} size={size} strokeWidth={focused ? 2.4 : 2} />
+          ),
+          href: isAdmin ? null : undefined,
+        }}
+      />
+      <Tabs.Screen
+        name="campaign-detail"
+        options={{
+          title: 'Campaign Detail',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Megaphone color={color} size={size} strokeWidth={focused ? 2.4 : 2} />
+          ),
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="leaderboard"
+        options={{
+          title: 'Leaderboard',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Trophy color={color} size={size} strokeWidth={focused ? 2.4 : 2} />
+          ),
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="admin-campaigns"
+        options={{
+          title: 'Manage Campaigns',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Megaphone color={color} size={size} strokeWidth={focused ? 2.4 : 2} />
+          ),
+          href: isAdmin ? null : undefined,
+        }}
+      />
+      <Tabs.Screen
+        name="admin-campaign-review"
+        options={{
+          title: 'Review Submissions',
+          tabBarIcon: ({ color, size, focused }) => (
+            <FileText color={color} size={size} strokeWidth={focused ? 2.4 : 2} />
+          ),
+          href: isAdmin ? null : undefined,
+        }}
+      />
+      <Tabs.Screen
+        name="admin-badges"
+        options={{
+          title: 'Manage Badges',
+          tabBarIcon: ({ color, size, focused }) => (
+            <Award color={color} size={size} strokeWidth={focused ? 2.4 : 2} />
           ),
           href: isAdmin ? null : undefined,
         }}

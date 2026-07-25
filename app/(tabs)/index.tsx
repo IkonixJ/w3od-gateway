@@ -19,6 +19,7 @@ import { NotificationPreview } from '@/components/dashboard/NotificationPreview'
 import { useAuth } from '@/context/AuthProvider';
 import { getLevelInfo } from '@/lib/wallet';
 import { getMyWallet, getTransactions } from '@/lib/wallet-service';
+import { getActiveCampaigns } from '@/lib/campaign-service';
 import {
   PLACEHOLDER_CAMPAIGNS,
   PLACEHOLDER_NOTIFICATIONS,
@@ -26,6 +27,7 @@ import {
 import type { Wallet } from '@/types/wallet';
 import type { TransactionWithProfiles } from '@/types/wallet';
 import type { TransactionRow } from '@/types/dashboard';
+import type { Campaign } from '@/types/campaigns';
 import { Palette, Typography, Spacing, Radii } from '@/design/tokens';
 import { wideCardMaxWidth, screenPadding } from '@/design/responsive';
 
@@ -57,17 +59,20 @@ export default function DashboardScreen() {
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [recentTx, setRecentTx] = useState<TransactionRow[]>([]);
   const [walletLoading, setWalletLoading] = useState(true);
+  const [activeCampaigns, setActiveCampaigns] = useState<Campaign[]>([]);
 
   useEffect(() => {
     let active = true;
     (async () => {
-      const [w, txs] = await Promise.all([
+      const [w, txs, campaigns] = await Promise.all([
         getMyWallet(),
         getTransactions({}).then((rows) => rows.slice(0, 5)),
+        getActiveCampaigns().then((c) => c.slice(0, 5)),
       ]);
       if (!active) return;
       setWallet(w);
       setWalletLoading(false);
+      setActiveCampaigns(campaigns);
       // Map wallet transactions to the dashboard TransactionItem shape
       const mapped: TransactionRow[] = txs.map((t) => ({
         id: t.id,
@@ -196,15 +201,36 @@ export default function DashboardScreen() {
         {/* ─── Active Campaigns ──────────────────────────────────────── */}
         <View style={styles.section}>
           <SectionTitle title="Active Campaigns" tone="lime" actionLabel="View All" onAction={() => router.push('/(tabs)/campaigns')} />
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.campaignScroll}
-          >
-            {PLACEHOLDER_CAMPAIGNS.map((c) => (
-              <CampaignCard key={c.id} campaign={c} />
-            ))}
-          </ScrollView>
+          {activeCampaigns.length === 0 ? (
+            <GlassCard tone="lime" padding={Spacing['4']} style={styles.campaignEmpty}>
+              <NeonText variant="body" tone="muted" style={styles.campaignEmptyText}>
+                No active campaigns right now. Check back soon!
+              </NeonText>
+            </GlassCard>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.campaignScroll}
+            >
+              {activeCampaigns.map((c) => (
+                <CampaignCard
+                  key={c.id}
+                  campaign={{
+                    id: c.id,
+                    title: c.title,
+                    bannerUri: c.banner_url ?? '',
+                    reward: Number(c.reward_amount),
+                    xpReward: c.xp_reward,
+                    deadline: c.end_date,
+                    participants: 0,
+                    status: 'active',
+                  }}
+                  onParticipate={() => router.push(`/(tabs)/campaign-detail?id=${c.id}`)}
+                />
+              ))}
+            </ScrollView>
+          )}
         </View>
 
         {/* ─── Recent Transactions ───────────────────────────────────── */}
@@ -342,6 +368,14 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     gap: Spacing['4'],
+  },
+  campaignEmpty: {
+    alignItems: 'center',
+    paddingVertical: Spacing['6'],
+  },
+  campaignEmptyText: {
+    fontSize: Typography.sizes.sm,
+    textAlign: 'center',
   },
   campaignScroll: {
     gap: Spacing['4'],

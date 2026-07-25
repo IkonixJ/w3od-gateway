@@ -10,21 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import {
-  ArrowLeft,
-  ShieldCheck,
-  ShieldAlert,
-  Clock,
-  CheckCircle2,
-  XCircle,
-  IdCard,
-  Calendar,
-  User,
-  Lock,
-  Info,
-  RotateCw,
-  ChevronRight,
-} from 'lucide-react-native';
+import { ArrowLeft, ShieldCheck, ShieldAlert, Clock, CircleCheck as CheckCircle2, Circle as XCircle, IdCard, Calendar, User, Lock, Info, RotateCw, ChevronRight } from 'lucide-react-native';
 
 import {
   ScreenShell,

@@ -13,7 +13,7 @@ import {
 
 import { Palette, Typography, Radii, Borders, Spacing } from '@/design/tokens';
 
-type InputTone = 'cyan' | 'blue' | 'purple' | 'magenta' | 'amber';
+type InputTone = 'cyan' | 'blue' | 'purple' | 'magenta' | 'amber' | 'lime' | 'rose';
 
 interface NeonInputProps {
   label?: string;
@@ -21,7 +21,7 @@ interface NeonInputProps {
   onChangeText: (text: string) => void;
   placeholder?: string;
   secureTextEntry?: boolean;
-  keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad' | 'number-pad';
+  keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad' | 'number-pad' | 'url' | 'numbers-and-punctuation';
   autoCapitalize?: 'none' | 'sentences' | 'words';
   autoCorrect?: boolean;
   leftIcon?: ReactNode;
@@ -40,6 +40,8 @@ const FOCUS_BORDER: Record<InputTone, string> = {
   purple: 'rgba(138,43,226,0.6)',
   magenta: 'rgba(255,0,229,0.6)',
   amber: 'rgba(255,184,0,0.6)',
+  lime: 'rgba(182,255,0,0.6)',
+  rose: 'rgba(255,45,111,0.6)',
 };
 
 const FOCUS_GLOW: Record<InputTone, string> = {
@@ -48,6 +50,8 @@ const FOCUS_GLOW: Record<InputTone, string> = {
   purple: '#8A2BE2',
   magenta: '#FF00E5',
   amber: '#FFB800',
+  lime: '#B6FF00',
+  rose: '#FF2D6F',
 };
 
 export function NeonInput({

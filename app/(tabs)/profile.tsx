@@ -38,6 +38,7 @@ import {
   Hash,
   Trophy,
   IdCard,
+  LifeBuoy,
   type LucideIcon,
 } from 'lucide-react-native';
 
@@ -469,6 +470,21 @@ export default function ProfileScreen() {
           <NeonText variant="body" tone="muted" style={styles.badgesHint}>
             Earn more badges by completing campaigns, events, and community challenges.
           </NeonText>
+        </GlassCard>
+
+        {/* ─── Support ────────────────────────────────────────────────── */}
+        <SectionTitle title="Support" tone="cyan" />
+        <GlassCard tone="cyan" padding={Spacing['5']} style={styles.sectionCard}>
+          <SettingRow
+            icon={<LifeBuoy color={Palette.neonCyan} size={20} />}
+            title="Support Center"
+            subtitle="Get help with your account"
+            rightElement={
+              <Pressable onPress={() => router.push('/(tabs)/support')} hitSlop={10}>
+                <ChevronRight color={Palette.textTertiary} size={20} />
+              </Pressable>
+            }
+          />
         </GlassCard>
 
         {/* ─── Security Settings ─────────────────────────────────────────── */}

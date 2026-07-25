@@ -9,18 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import {
-  Send,
-  ArrowLeft,
-  AtSign,
-  Hash,
-  Check,
-  Search,
-  User,
-  ShieldCheck,
-  Info,
-  CheckCircle2,
-} from 'lucide-react-native';
+import { Send, ArrowLeft, AtSign, Hash, Check, Search, User, ShieldCheck, Info, CircleCheck as CheckCircle2 } from 'lucide-react-native';
 
 import {
   ScreenShell,

@@ -1,16 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import {
-  Send,
-  Download,
-  Gift,
-  History,
-  Sparkles,
-  MoreHorizontal,
-  ShieldCheck,
-  ChevronRight,
-} from 'lucide-react-native';
+import { Send, Download, Gift, History, Sparkles, MoveHorizontal as MoreHorizontal, ShieldCheck, ChevronRight } from 'lucide-react-native';
 
 import {
   ScreenShell,

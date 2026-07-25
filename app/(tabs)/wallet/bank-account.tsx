@@ -10,17 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import {
-  ArrowLeft,
-  Banknote,
-  User,
-  Hash,
-  Check,
-  Trash2,
-  ShieldCheck,
-  Building2,
-  Edit3,
-} from 'lucide-react-native';
+import { ArrowLeft, Banknote, User, Hash, Check, Trash2, ShieldCheck, Building2, CreditCard as Edit3 } from 'lucide-react-native';
 
 import {
   ScreenShell,

@@ -8,17 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import {
-  ArrowLeft,
-  Gift,
-  Clock,
-  Banknote,
-  Plus,
-  CheckCircle2,
-  Calendar,
-  Info,
-  AlertCircle,
-} from 'lucide-react-native';
+import { ArrowLeft, Gift, Clock, Banknote, Plus, CircleCheck as CheckCircle2, Calendar, Info, CircleAlert as AlertCircle } from 'lucide-react-native';
 
 import { ScreenShell, GlassCard, NeonText, NeonButton, NeonInput, Divider, Badge } from '@/components/ui';
 import { PinConfirmModal } from '@/components/wallet/PinConfirmModal';

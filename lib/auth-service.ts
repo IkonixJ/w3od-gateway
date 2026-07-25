@@ -167,7 +167,7 @@ export async function listTrustedDevices(userId: string): Promise<
 > {
   const { data, error } = await supabase
     .from('trusted_devices')
-    .select('id, device_name, trusted_at')
+    .select('id, device_name, trusted_at, platform, last_login_at')
     .eq('user_id', userId)
     .order('trusted_at', { ascending: false });
   if (error || !data) return [];

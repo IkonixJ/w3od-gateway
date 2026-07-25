@@ -134,6 +134,16 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Settings',
+          tabBarIcon: ({ color, size, focused }) => (
+            <LifeBuoy color={color} size={size} strokeWidth={focused ? 2.4 : 2} />
+          ),
+          href: null,
+        }}
+      />
+      <Tabs.Screen
         name="support"
         options={{
           title: 'Support',

@@ -39,6 +39,7 @@ import {
   Trophy,
   IdCard,
   LifeBuoy,
+  Settings as SettingsIcon,
   type LucideIcon,
 } from 'lucide-react-native';
 
@@ -472,9 +473,20 @@ export default function ProfileScreen() {
           </NeonText>
         </GlassCard>
 
-        {/* ─── Support ────────────────────────────────────────────────── */}
-        <SectionTitle title="Support" tone="cyan" />
+        {/* ─── Settings & Support ───────────────────────────────────────── */}
+        <SectionTitle title="Settings & Support" tone="cyan" />
         <GlassCard tone="cyan" padding={Spacing['5']} style={styles.sectionCard}>
+          <SettingRow
+            icon={<SettingsIcon color={Palette.neonCyan} size={20} />}
+            title="Settings"
+            subtitle="Account, security, notifications"
+            rightElement={
+              <Pressable onPress={() => router.push('/(tabs)/settings')} hitSlop={10}>
+                <ChevronRight color={Palette.textTertiary} size={20} />
+              </Pressable>
+            }
+          />
+          <Divider tone="white" />
           <SettingRow
             icon={<LifeBuoy color={Palette.neonCyan} size={20} />}
             title="Support Center"

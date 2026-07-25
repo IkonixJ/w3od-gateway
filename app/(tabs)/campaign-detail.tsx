@@ -27,6 +27,7 @@ import { useAuth } from '@/context/AuthProvider';
 import { getLevelInfo, getRankColor } from '@/lib/wallet';
 import {
   getMyCampaigns,
+  getActiveCampaigns,
   joinCampaign,
   submitProof,
   submissionStatusLabel,
@@ -34,6 +35,7 @@ import {
   uploadProofFile,
 } from '@/lib/campaign-service';
 import { Palette, Typography, Spacing, Radii } from '@/design/tokens';
+import { pickFile, fileToDataUrl, canUploadFiles } from '@/lib/file-utils';
 import { wideCardMaxWidth, screenPadding } from '@/design/responsive';
 import type { MyCampaign, ProofType } from '@/types/campaigns';
 
@@ -66,9 +68,32 @@ export default function CampaignDetailScreen() {
   const [proofError, setProofError] = useState<string | null>(null);
 
   const loadCampaign = useCallback(async () => {
-    const mine = await getMyCampaigns();
+    const [mine, active] = await Promise.all([
+      getMyCampaigns(),
+      getActiveCampaigns(),
+    ]);
     const found = mine.find((c) => c.id === id);
-    setCampaign(found ?? null);
+    if (found) {
+      setCampaign(found);
+    } else {
+      const activeFound = active.find((c) => c.id === id);
+      if (activeFound) {
+        setCampaign({
+          ...activeFound,
+          participation_id: null,
+          submission_status: null,
+          proof_type: null,
+          proof_url: null,
+          proof_note: null,
+          rejection_reason: null,
+          submitted_at: null,
+          reviewed_at: null,
+          reward_credited: false,
+        });
+      } else {
+        setCampaign(null);
+      }
+    }
     setLoading(false);
   }, [id]);
 
@@ -97,34 +122,32 @@ export default function CampaignDetailScreen() {
     setProofModal(true);
   };
 
-  const handleFileUpload = () => {
+  const handleFileUpload = async () => {
     if (!profile?.id || !campaign?.participation_id) return;
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/*,video/*,application/pdf,.doc,.docx,.zip';
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      setSubmitting(true);
-      setProofError(null);
-      const dataUrl = await fileToDataUrl(file);
-      const detectedType = detectProofType(file.type, file.name);
-      const { url, error: uploadError } = await uploadProofFile(
-        profile.id,
-        campaign.participation_id!,
-        dataUrl,
-        `${Date.now()}-${file.name}`,
-        file.type
-      );
-      setSubmitting(false);
-      if (uploadError || !url) {
-        setProofError(uploadError ?? 'Upload failed.');
-        return;
-      }
-      setProofType(detectedType);
-      setProofUrl(url);
-    };
-    input.click();
+    if (!canUploadFiles()) {
+      Alert.alert('Upload Unavailable', 'File upload is only available on web. Please use a browser to upload files.');
+      return;
+    }
+    const file = await pickFile('image/*,video/*,application/pdf,.doc,.docx,.zip');
+    if (!file) return;
+    setSubmitting(true);
+    setProofError(null);
+    const dataUrl = await fileToDataUrl(file.uri);
+    const detectedType = detectProofType(file.type, file.name);
+    const { url, error: uploadError } = await uploadProofFile(
+      profile.id,
+      campaign.participation_id!,
+      dataUrl,
+      `${Date.now()}-${file.name}`,
+      file.type
+    );
+    setSubmitting(false);
+    if (uploadError || !url) {
+      setProofError(uploadError ?? 'Upload failed.');
+      return;
+    }
+    setProofType(detectedType);
+    setProofUrl(url);
   };
 
   const handleSubmitProof = async () => {
@@ -499,15 +522,6 @@ function ReceiptRow({ label, value, tone }: { label: string; value: string; tone
       </NeonText>
     </View>
   );
-}
-
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 }
 
 function detectProofType(mimeType: string, fileName: string): ProofType {

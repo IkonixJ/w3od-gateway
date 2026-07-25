@@ -59,12 +59,19 @@ export default function LeaderboardScreen() {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
-    const data = await getLeaderboard(category, period);
-    setEntries(data);
-    setLoading(false);
-    setRefreshing(false);
+    try {
+      const data = await getLeaderboard(category, period);
+      setEntries(data);
+      setError(null);
+    } catch {
+      setError('Failed to load. Pull to retry.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, [category, period]);
 
   useEffect(() => {
@@ -171,6 +178,10 @@ export default function LeaderboardScreen() {
         {loading ? (
           <View style={styles.loadingWrap}>
             <ActivityIndicator size="large" color={Palette.neonAmber} />
+          </View>
+        ) : error ? (
+          <View style={styles.loadingWrap}>
+            <NeonText variant="body" tone="rose">{error}</NeonText>
           </View>
         ) : entries.length === 0 ? (
           <GlassCard tone="amber" padding={Spacing['6']} style={styles.emptyCard}>

@@ -26,7 +26,8 @@ export type NotificationTone =
   | 'magenta'
   | 'lime'
   | 'amber'
-  | 'rose';
+  | 'rose'
+  | 'muted';
 
 export type NotificationIcon =
   | 'award'
@@ -73,5 +74,5 @@ export const NOTIFICATION_CATEGORIES: NotificationCategoryInfo[] = [
   { key: 'kyc', label: 'KYC', tone: 'blue' },
   { key: 'messages', label: 'Messages', tone: 'cyan' },
   { key: 'announcements', label: 'Announcements', tone: 'amber' },
-  { key: 'system', label: 'System', tone: 'muted' as NotificationTone },
+  { key: 'system', label: 'System', tone: 'muted' },
 ];

@@ -1,16 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
-import { Text } from 'react-native';
+import { useEffect, useRef } from 'react';
 import Animated, {
   useSharedValue,
   withTiming,
   Easing,
-  runOnJS,
+  useAnimatedProps,
 } from 'react-native-reanimated';
 
 // Animated counting hook — smoothly transitions a displayed number from
-// its old value to its new value using React state updates.
+// its old value to its new value using Reanimated shared values (no 60fps re-renders).
 export function useAnimatedCount(target: number, duration = 800) {
-  const [displayValue, setDisplayValue] = useState(target);
   const shared = useSharedValue(target);
   const firstRun = useRef(true);
 
@@ -18,34 +16,20 @@ export function useAnimatedCount(target: number, duration = 800) {
     if (firstRun.current) {
       firstRun.current = false;
       shared.value = target;
-      setDisplayValue(target);
       return;
     }
-    shared.value = withTiming(
-      target,
-      { duration, easing: Easing.out(Easing.cubic) },
-      (finished) => {
-        if (finished) {
-          runOnJS(setDisplayValue)(target);
-        }
-      }
-    );
-    // Also set up a frame-based update for smooth counting
-    const interval = setInterval(() => {
-      const current = shared.value;
-      setDisplayValue(Math.round(current));
-      if (Math.abs(current - target) < 1) {
-        setDisplayValue(target);
-        clearInterval(interval);
-      }
-    }, 16);
-    return () => clearInterval(interval);
+    shared.value = withTiming(target, {
+      duration,
+      easing: Easing.out(Easing.cubic),
+    });
   }, [target, duration, shared]);
 
-  return { displayValue, shared };
+  return { shared };
 }
 
 // AnimatedText component that renders a number that counts up/down smoothly.
+// Uses Reanimated's useAnimatedProps to update the text prop on the native
+// thread without React re-renders.
 export function AnimatedCountText({
   target,
   style,
@@ -55,8 +39,16 @@ export function AnimatedCountText({
   style?: object;
   duration?: number;
 }) {
-  const { displayValue } = useAnimatedCount(target, duration);
-  return <Text style={style}>{String(displayValue)}</Text>;
+  const { shared } = useAnimatedCount(target, duration);
+  const animatedProps = useAnimatedProps(() => {
+    'worklet';
+    return { text: String(Math.round(shared.value)) } as any;
+  });
+  return (
+    <Animated.Text style={style} animatedProps={animatedProps}>
+      {String(target)}
+    </Animated.Text>
+  );
 }
 
 // Helper to trigger a callback when XP increases.

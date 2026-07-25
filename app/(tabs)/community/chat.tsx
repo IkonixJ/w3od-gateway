@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import {
+  Alert,
   View,
   StyleSheet,
   ScrollView,
@@ -41,6 +42,7 @@ import {
 import { setTyping, clearTyping, subscribeToTyping, uploadChatMedia } from '@/lib/community-service';
 import { formatMessageTime } from '@/lib/community-service';
 import { Palette, Typography, Spacing, Radii } from '@/design/tokens';
+import { pickFile, fileToDataUrl, canUploadFiles } from '@/lib/file-utils';
 import { screenPadding } from '@/design/responsive';
 import type { ConversationMessage, MessageType } from '@/types/community';
 
@@ -144,24 +146,22 @@ export default function ChatScreen() {
     loadMessages();
   };
 
-  const handleFileUpload = () => {
+  const handleFileUpload = async () => {
     if (!profile?.id || !id) return;
-    const inputEl = document.createElement('input');
-    inputEl.type = 'file';
-    inputEl.accept = 'image/*,video/*,application/pdf,.doc,.docx,.zip';
-    inputEl.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      setSending(true);
-      const dataUrl = await fileToDataUrl(file);
-      const { url, error } = await uploadChatMedia(profile.id, dataUrl, `${Date.now()}-${file.name}`, file.type);
-      setSending(false);
-      if (error || !url) return;
-      const msgType: MessageType = detectMsgType(file.type, file.name);
-      const result = await sendMessage(id, file.name, msgType, url, null);
-      if (result.success) loadMessages();
-    };
-    inputEl.click();
+    if (!canUploadFiles()) {
+      Alert.alert('Upload Unavailable', 'File upload is only available on web. Please use a browser to upload files.');
+      return;
+    }
+    const file = await pickFile('image/*,video/*,application/pdf,.doc,.docx,.zip');
+    if (!file) return;
+    setSending(true);
+    const dataUrl = await fileToDataUrl(file.uri);
+    const { url, error } = await uploadChatMedia(profile.id, dataUrl, `${Date.now()}-${file.name}`, file.type);
+    setSending(false);
+    if (error || !url) return;
+    const msgType: MessageType = detectMsgType(file.type, file.name);
+    const result = await sendMessage(id, file.name, msgType, url, null);
+    if (result.success) loadMessages();
   };
 
   if (loading) {
@@ -414,15 +414,6 @@ function groupByEmoji(reactions: { emoji: string; user_id: string; username: str
     else map.set(r.emoji, { emoji: r.emoji, count: 1 });
   }
   return Array.from(map.values());
-}
-
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 }
 
 function detectMsgType(mimeType: string, fileName: string): MessageType {

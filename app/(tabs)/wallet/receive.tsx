@@ -13,6 +13,7 @@ import { ScreenShell, GlassCard, NeonText, NeonButton } from '@/components/ui';
 import { QRCodeView } from '@/components/wallet/QRCodeView';
 import { useAuth } from '@/context/AuthProvider';
 import { getMyWallet } from '@/lib/wallet-service';
+import { copyToClipboard } from '@/lib/file-utils';
 import { Palette, Typography, Spacing, Radii } from '@/design/tokens';
 import { cardMaxWidth, screenPadding } from '@/design/responsive';
 import type { Wallet } from '@/types/wallet';
@@ -31,12 +32,12 @@ export default function WalletReceiveScreen() {
     });
   }, []);
 
-  const copyToClipboard = useCallback((text: string, field: 'username' | 'account') => {
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(text).catch(() => {});
+  const handleCopy = useCallback(async (text: string, field: 'username' | 'account') => {
+    const copied = await copyToClipboard(text);
+    if (copied) {
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 1500);
     }
-    setCopiedField(field);
-    setTimeout(() => setCopiedField(null), 1500);
   }, []);
 
   const shareDetails = useCallback(() => {
@@ -44,9 +45,9 @@ export default function WalletReceiveScreen() {
     if (typeof navigator !== 'undefined' && (navigator as any).share) {
       (navigator as any).share({ title: 'My W3OD Details', text }).catch(() => {});
     } else {
-      copyToClipboard(text, 'account');
+      handleCopy(text, 'account');
     }
-  }, [profile, wallet, copyToClipboard]);
+  }, [profile, wallet, handleCopy]);
 
   const qrValue = wallet
     ? `w3od:${wallet.account_number}`
@@ -100,7 +101,7 @@ export default function WalletReceiveScreen() {
               </NeonText>
 
               {/* Username row */}
-              <Pressable onPress={() => profile?.username && copyToClipboard(profile.username, 'username')} style={styles.copyRow}>
+              <Pressable onPress={() => profile?.username && handleCopy(profile.username, 'username')} style={styles.copyRow}>
                 <View style={styles.copyIconWrap}>
                   <AtSign color={Palette.neonCyan} size={18} />
                 </View>
@@ -123,7 +124,7 @@ export default function WalletReceiveScreen() {
 
               {/* Account number row */}
               <Pressable
-                onPress={() => wallet?.account_number && copyToClipboard(wallet.account_number, 'account')}
+                onPress={() => wallet?.account_number && handleCopy(wallet.account_number, 'account')}
                 style={styles.copyRow}
               >
                 <View style={styles.copyIconWrap}>

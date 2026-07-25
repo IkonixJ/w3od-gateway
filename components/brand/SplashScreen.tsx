@@ -19,8 +19,8 @@ import { Palette, Gradients, Typography } from '@/design/tokens';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
-// Logo size scales with screen width, clamped to a comfortable range
-const LOGO_SIZE = Math.max(100, Math.min(180, SCREEN_W * 0.38));
+// Logo size scales with screen width — bigger for more presence
+const LOGO_SIZE = Math.max(140, Math.min(240, SCREEN_W * 0.5));
 
 interface SplashScreenProps {
   onAnimationComplete?: () => void;
@@ -193,7 +193,7 @@ export function SplashScreen({ onAnimationComplete, duration = 2800 }: SplashScr
             style={[
               styles.loaderFill,
               {
-                width: withTiming('100%', {
+                width: withTiming(100, {
                   duration: duration - 200,
                   easing: REasing.inOut(REasing.ease),
                 }),
@@ -289,6 +289,7 @@ const styles = StyleSheet.create({
   },
   loaderFill: {
     height: '100%',
+    width: 0,
     backgroundColor: Palette.neonCyan,
     shadowColor: '#00F0FF',
     shadowOffset: { width: 0, height: 0 },

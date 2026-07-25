@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { View, StyleSheet, Image } from 'react-native';
+import { View, Text, StyleSheet, Image } from 'react-native';
 
 import { W3ODLogo } from '@/components/brand/W3ODLogo';
 import { Palette, Radii, Borders, Spacing } from '@/design/tokens';
@@ -46,7 +46,8 @@ export function Avatar({ uri, displayName, size = 'md', ring = true, fallbackIco
 
   const initials = (displayName ?? '?')
     .split(/[ _-]+/)
-    .map((w) => w[0])
+    .filter(Boolean)
+    .map((w) => w[0] ?? '')
     .slice(0, 2)
     .join('')
     .toUpperCase();
@@ -77,8 +78,6 @@ export function Avatar({ uri, displayName, size = 'md', ring = true, fallbackIco
     </View>
   );
 }
-
-import { Text } from 'react-native';
 
 function AvatarText({ text, dim }: { text: string; dim: number }) {
   return (

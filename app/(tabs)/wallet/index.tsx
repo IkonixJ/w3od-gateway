@@ -47,7 +47,10 @@ import {
 } from '@/lib/wallet-service';
 import { Palette, Typography, Spacing, Radii, Gradients, Animation } from '@/design/tokens';
 import { wideCardMaxWidth, screenPadding, responsive } from '@/design/responsive';
+import { copyToClipboard } from '@/lib/file-utils';
 import type { Wallet } from '@/types/wallet';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 export default function WalletOverviewScreen() {
   const router = useRouter();
@@ -55,16 +58,23 @@ export default function WalletOverviewScreen() {
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [hidden, setHidden] = useState(false);
   const [nextProcessing, setNextProcessing] = useState<string | null>(null);
 
   const limits = getWalletLimits();
 
   const loadWallet = useCallback(async () => {
-    const w = await getMyWallet();
-    setWallet(w);
-    setLoading(false);
-    setRefreshing(false);
+    setError(null);
+    try {
+      const w = await getMyWallet();
+      setWallet(w);
+    } catch {
+      setError('Failed to load wallet. Pull to retry.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, []);
 
   const loadProcessingDate = useCallback(async () => {
@@ -84,11 +94,9 @@ export default function WalletOverviewScreen() {
 
   const toggleHidden = useCallback(() => setHidden((h) => !h), []);
 
-  const copyAccountNumber = useCallback(() => {
+  const copyAccountNumber = useCallback(async () => {
     if (!wallet?.account_number) return;
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(wallet.account_number).catch(() => {});
-    }
+    await copyToClipboard(wallet.account_number);
   }, [wallet?.account_number]);
 
   // Ambient pulse for token glyph
@@ -114,6 +122,16 @@ export default function WalletOverviewScreen() {
           <NeonText variant="body" tone="muted" style={styles.loadingText}>
             Loading wallet...
           </NeonText>
+        </View>
+      </ScreenShell>
+    );
+  }
+
+  if (error) {
+    return (
+      <ScreenShell variant="deep">
+        <View style={styles.loadingWrap}>
+          <NeonText variant="body" tone="rose">{error}</NeonText>
         </View>
       </ScreenShell>
     );
@@ -329,8 +347,6 @@ function QuickActionTile({
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
-
-  const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
   return (
     <AnimatedPressable

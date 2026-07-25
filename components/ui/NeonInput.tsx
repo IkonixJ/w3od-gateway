@@ -5,11 +5,13 @@ import {
 } from 'react';
 import {
   View,
+  Text,
   TextInput,
   StyleSheet,
   Pressable,
   type ViewStyle,
 } from 'react-native';
+import { Eye, EyeOff } from 'lucide-react-native';
 
 import { Palette, Typography, Radii, Borders, Spacing } from '@/design/tokens';
 
@@ -121,8 +123,8 @@ export function NeonInput({
           selectionColor={Palette.neonCyan}
         />
         {secureTextEntry && (
-          <Pressable onPress={toggleReveal} hitSlop={10} style={styles.rightIcon}>
-            {rightIcon}
+          <Pressable onPress={toggleReveal} hitSlop={10} style={styles.rightIcon} accessibilityLabel={reveal ? 'Hide password' : 'Show password'} accessibilityRole="button">
+            {rightIcon ?? (reveal ? <EyeOff color={Palette.textTertiary} size={18} /> : <Eye color={Palette.textTertiary} size={18} />)}
           </Pressable>
         )}
         {!secureTextEntry && rightIcon && <View style={styles.rightIcon}>{rightIcon}</View>}
@@ -133,8 +135,6 @@ export function NeonInput({
     </View>
   );
 }
-
-import { Text } from 'react-native';
 
 const styles = StyleSheet.create({
   wrapper: {

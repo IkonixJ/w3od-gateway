@@ -207,16 +207,6 @@ export function subscribeToConversationMessages(
       },
       () => callback()
     )
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'message_reactions',
-        filter: `scope=eq.dm`,
-      },
-      () => callback()
-    )
     .subscribe();
   return () => {
     supabase.removeChannel(channel);
@@ -246,16 +236,6 @@ export function subscribeToGroupMessages(
         schema: 'public',
         table: 'group_messages',
         filter: `group_id=eq.${groupId}`,
-      },
-      () => callback()
-    )
-    .on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table: 'message_reactions',
-        filter: `scope=eq.group`,
       },
       () => callback()
     )

@@ -17,10 +17,40 @@ export async function getDeviceFingerprint(): Promise<string> {
     factors.push(String(screen.height || 0));
     factors.push(String(screen.colorDepth || 0));
     factors.push(String(new Date().getTimezoneOffset()));
+  } else {
+    // On native, add screen dimensions and timezone for more entropy
+    try {
+      const { width, height } = await getNativeScreenSize();
+      factors.push(`${width}x${height}`);
+    } catch {
+      // Screen dimensions unavailable — skip
+    }
+    try {
+      const tz = await getNativeTimezone();
+      factors.push(tz);
+    } catch {
+      // Timezone unavailable — skip
+    }
   }
 
   const raw = factors.join('|');
   return simpleHash(raw);
+}
+
+async function getNativeScreenSize(): Promise<{ width: number; height: number }> {
+  // Dynamic import so web never evaluates this module
+  const { Dimensions } = await import('react-native');
+  const { width, height } = Dimensions.get('window');
+  return { width, height };
+}
+
+async function getNativeTimezone(): Promise<string> {
+  // Use Intl if available (works on both native and web)
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown';
+  } catch {
+    return 'unknown';
+  }
 }
 
 export function getDeviceName(): string {

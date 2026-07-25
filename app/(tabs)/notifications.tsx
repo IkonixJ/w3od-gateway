@@ -72,20 +72,28 @@ const TONE_COLOR: Record<NotificationTone, string> = {
   lime: Palette.neonLime,
   amber: Palette.neonAmber,
   rose: Palette.neonRose,
+  muted: Palette.textSecondary,
 };
 
 export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<NotificationCategory | 'all'>('all');
 
   const loadNotifications = useCallback(async () => {
-    const cat = filter === 'all' ? null : filter;
-    const data = await getNotifications(cat as NotificationCategory | null, 100, 0);
-    setNotifications(data);
-    setLoading(false);
-    setRefreshing(false);
+    setError(null);
+    try {
+      const cat = filter === 'all' ? null : filter;
+      const data = await getNotifications(cat as NotificationCategory | null, 100, 0);
+      setNotifications(data);
+    } catch {
+      setError('Failed to load notifications. Pull to retry.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, [filter]);
 
   useEffect(() => {
@@ -160,7 +168,7 @@ export default function NotificationsScreen() {
               onPress={() => setFilter(cat.key)}
               style={[styles.filterChip, filter === cat.key && styles.filterChipActive]}
             >
-              <Text style={[styles.filterChipText, { color: filter === cat.key ? (cat.tone === 'muted' as NotificationTone ? Palette.textSecondary : TONE_COLOR[cat.tone as NotificationTone]) : Palette.textTertiary }]}>
+              <Text style={[styles.filterChipText, { color: filter === cat.key ? TONE_COLOR[cat.tone] : Palette.textTertiary }]}>
                 {cat.label}
               </Text>
             </Pressable>
@@ -171,6 +179,10 @@ export default function NotificationsScreen() {
         {loading ? (
           <View style={styles.loadingWrap}>
             <ActivityIndicator size="large" color={Palette.neonMagenta} />
+          </View>
+        ) : error ? (
+          <View style={styles.loadingWrap}>
+            <NeonText variant="body" tone="rose">{error}</NeonText>
           </View>
         ) : notifications.length === 0 ? (
           <GlassCard tone="magenta" padding={Spacing['6']} style={styles.emptyCard}>
@@ -213,7 +225,7 @@ function NotificationRow({
 
   return (
     <GlassCard
-      tone={notification.tone === 'muted' as NotificationTone ? 'none' : (notification.tone as any)}
+      tone={notification.tone === 'muted' ? 'none' : notification.tone}
       gradientBorder={!notification.read}
       padding={Spacing['4']}
       style={styles.notifCard}
@@ -224,7 +236,7 @@ function NotificationRow({
         </View>
         <View style={styles.notifMeta}>
           <View style={styles.notifTitleRow}>
-            <NeonText variant="body" weight="semiBold" tone={notification.tone === 'muted' as NotificationTone ? 'muted' : (notification.tone as any)} style={styles.notifTitle} numberOfLines={1}>
+            <NeonText variant="body" weight="semiBold" tone={notification.tone === 'muted' ? 'muted' : notification.tone} style={styles.notifTitle} numberOfLines={1}>
               {notification.title}
             </NeonText>
             {!notification.read && <View style={styles.unreadDot} />}

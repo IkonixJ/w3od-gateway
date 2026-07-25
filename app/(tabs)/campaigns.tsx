@@ -40,16 +40,23 @@ export default function CampaignsScreen() {
   const [myCampaigns, setMyCampaigns] = useState<MyCampaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
-    const [active, mine] = await Promise.all([
-      getActiveCampaigns(),
-      getMyCampaigns(),
-    ]);
-    setCampaigns(active);
-    setMyCampaigns(mine);
-    setLoading(false);
-    setRefreshing(false);
+    try {
+      const [active, mine] = await Promise.all([
+        getActiveCampaigns(),
+        getMyCampaigns(),
+      ]);
+      setCampaigns(active);
+      setMyCampaigns(mine);
+      setError(null);
+    } catch {
+      setError('Failed to load. Pull to retry.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -74,6 +81,16 @@ export default function CampaignsScreen() {
       <ScreenShell variant="deep" safeArea={false}>
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color={Palette.neonLime} />
+        </View>
+      </ScreenShell>
+    );
+  }
+
+  if (error && campaigns.length === 0 && myCampaigns.length === 0) {
+    return (
+      <ScreenShell variant="deep" safeArea={false}>
+        <View style={styles.loadingWrap}>
+          <NeonText variant="body" tone="rose">{error}</NeonText>
         </View>
       </ScreenShell>
     );

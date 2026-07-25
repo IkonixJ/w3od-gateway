@@ -16,15 +16,16 @@ import {
   Sparkles,
   Copy,
   Check,
-  CheckCircle2,
+  CircleCheck,
   Clock,
-  XCircle,
+  CircleX,
   type LucideIcon,
 } from 'lucide-react-native';
 
 import { ScreenShell, GlassCard, NeonText, Avatar, Divider, Badge, NeonButton } from '@/components/ui';
 import { useAuth } from '@/context/AuthProvider';
 import { getTransactionByReference, formatW3od, formatAmount } from '@/lib/wallet-service';
+import { copyToClipboard } from '@/lib/file-utils';
 import { Palette, Typography, Spacing, Radii } from '@/design/tokens';
 import { cardMaxWidth, screenPadding } from '@/design/responsive';
 import type { TransactionWithProfiles, TransactionType, TransactionStatus } from '@/types/wallet';
@@ -37,9 +38,9 @@ const TYPE_CONFIG: Record<TransactionType, { icon: LucideIcon; color: string; la
 };
 
 const STATUS_CONFIG: Record<TransactionStatus, { icon: LucideIcon; color: string; label: string }> = {
-  completed: { icon: CheckCircle2, color: Palette.neonLime, label: 'Completed' },
+  completed: { icon: CircleCheck, color: Palette.neonLime, label: 'Completed' },
   pending: { icon: Clock, color: Palette.neonAmber, label: 'Pending' },
-  failed: { icon: XCircle, color: Palette.neonRose, label: 'Failed' },
+  failed: { icon: CircleX, color: Palette.neonRose, label: 'Failed' },
 };
 
 export default function TransactionDetailScreen() {
@@ -61,13 +62,13 @@ export default function TransactionDetailScreen() {
     });
   }, [ref]);
 
-  const copyReference = () => {
+  const copyReference = async () => {
     if (!tx?.reference) return;
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(tx.reference).catch(() => {});
+    const copied = await copyToClipboard(tx.reference);
+    if (copied) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
     }
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
   };
 
   if (loading) {

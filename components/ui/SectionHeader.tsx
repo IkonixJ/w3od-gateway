@@ -1,9 +1,11 @@
 import { type ReactNode } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, ActivityIndicator, Pressable } from 'react-native';
+import { AlertCircle, RefreshCw, Inbox } from 'lucide-react-native';
 
-import { Palette, Typography, Spacing } from '@/design/tokens';
+import { NeonText } from './NeonText';
+import { Palette, Typography, Spacing, Radii } from '@/design/tokens';
 
-type SectionHeaderTone = 'cyan' | 'blue' | 'purple' | 'magenta' | 'lime' | 'amber' | 'muted';
+type SectionHeaderTone = 'cyan' | 'blue' | 'purple' | 'magenta' | 'lime' | 'amber' | 'muted' | 'rose';
 
 interface SectionHeaderProps {
   title: string;
@@ -20,6 +22,7 @@ const TITLE_COLOR: Record<SectionHeaderTone, string> = {
   lime: Palette.neonLime,
   amber: Palette.neonAmber,
   muted: Palette.textSecondary,
+  rose: Palette.neonRose,
 };
 
 export function SectionHeader({ title, subtitle, tone = 'cyan', right }: SectionHeaderProps) {
@@ -28,16 +31,63 @@ export function SectionHeader({ title, subtitle, tone = 'cyan', right }: Section
       <View style={styles.textBox}>
         <View style={styles.row}>
           <View style={[styles.accent, { backgroundColor: TITLE_COLOR[tone] }]} />
-          <Text style={[styles.title, { color: TITLE_COLOR[tone] }]}>{title}</Text>
+          <NeonText variant="heading" weight="semiBold" tone={tone} style={styles.title}>
+            {title.toUpperCase()}
+          </NeonText>
         </View>
-        {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+        {subtitle && <NeonText variant="body" tone="muted" style={styles.subtitle}>{subtitle}</NeonText>}
       </View>
       {right && <View style={styles.rightBox}>{right}</View>}
     </View>
   );
 }
 
-import { Text } from 'react-native';
+// ─── Loading State ───────────────────────────────────────────────────────────
+
+export function LoadingState({ label = 'Loading...', color = Palette.neonCyan }: { label?: string; color?: string }) {
+  return (
+    <View style={styles.stateContainer}>
+      <ActivityIndicator size="large" color={color} />
+      <NeonText variant="body" tone="muted" style={styles.stateLabel}>{label}</NeonText>
+    </View>
+  );
+}
+
+// ─── Error State ──────────────────────────────────────────────────────────────
+
+export function ErrorState({ message, onRetry, tone = 'cyan' }: { message: string; onRetry?: () => void; tone?: SectionHeaderTone }) {
+  const color = TITLE_COLOR[tone];
+  return (
+    <View style={styles.stateContainer}>
+      <View style={[styles.stateIconWrap, { backgroundColor: `${color}15` }]}>
+        <AlertCircle color={color} size={28} />
+      </View>
+      <NeonText variant="body" weight="semiBold" tone={tone} style={styles.stateTitle}>Something went wrong</NeonText>
+      <NeonText variant="body" tone="muted" style={styles.stateMessage}>{message}</NeonText>
+      {onRetry && (
+        <Pressable onPress={onRetry} style={[styles.retryButton, { borderColor: `${color}40` }]}>
+          <RefreshCw color={color} size={16} />
+          <NeonText variant="body" weight="medium" tone={tone} style={styles.retryText}>Try Again</NeonText>
+        </Pressable>
+      )}
+    </View>
+  );
+}
+
+// ─── Empty State ──────────────────────────────────────────────────────────────
+
+export function EmptyState({ title, message, icon, tone = 'cyan' }: { title: string; message?: string; icon?: ReactNode; tone?: SectionHeaderTone }) {
+  const color = TITLE_COLOR[tone];
+  return (
+    <View style={styles.stateContainer}>
+      <View style={[styles.stateIconWrap, { backgroundColor: `${color}15` }]}>
+        {icon ?? <Inbox color={color} size={28} />}
+      </View>
+      <NeonText variant="body" weight="semiBold" tone={tone} style={styles.stateTitle}>{title}</NeonText>
+      {message && <NeonText variant="body" tone="muted" style={styles.stateMessage}>{message}</NeonText>}
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -61,18 +111,55 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   title: {
-    fontFamily: Typography.families.headingSemiBold,
-    fontSize: Typography.sizes.lg,
+    fontSize: Typography.sizes.md,
     letterSpacing: Typography.letterSpacings.wide,
-    textTransform: 'uppercase',
   },
   subtitle: {
-    fontFamily: Typography.families.bodyRegular,
     fontSize: Typography.sizes.sm,
-    color: Palette.textTertiary,
     letterSpacing: 0.3,
   },
   rightBox: {
     alignItems: 'flex-end',
+  },
+  // State components
+  stateContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing['8'],
+    paddingHorizontal: Spacing['4'],
+    gap: Spacing['3'],
+  },
+  stateIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: Radii.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stateTitle: {
+    fontSize: Typography.sizes.md,
+    textAlign: 'center',
+  },
+  stateLabel: {
+    fontSize: Typography.sizes.sm,
+  },
+  stateMessage: {
+    fontSize: Typography.sizes.sm,
+    textAlign: 'center',
+    lineHeight: 20,
+    maxWidth: 280,
+  },
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing['2'],
+    paddingHorizontal: Spacing['4'],
+    paddingVertical: Spacing['2'],
+    borderRadius: Radii.md,
+    borderWidth: 1,
+    marginTop: Spacing['2'],
+  },
+  retryText: {
+    fontSize: Typography.sizes.sm,
   },
 });

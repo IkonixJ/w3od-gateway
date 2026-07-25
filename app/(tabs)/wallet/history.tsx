@@ -83,6 +83,7 @@ export default function WalletHistoryScreen() {
   const [transactions, setTransactions] = useState<TransactionWithProfiles[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<TransactionType | 'all'>('all');
@@ -90,10 +91,16 @@ export default function WalletHistoryScreen() {
   const [showFilters, setShowFilters] = useState(false);
 
   const loadTransactions = useCallback(async () => {
-    const data = await getTransactions({ search, type: typeFilter, status: statusFilter });
-    setTransactions(data);
-    setLoading(false);
-    setRefreshing(false);
+    setError(null);
+    try {
+      const data = await getTransactions({ search, type: typeFilter, status: statusFilter });
+      setTransactions(data);
+    } catch {
+      setError('Failed to load transactions. Pull to retry.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, [search, typeFilter, statusFilter]);
 
   useEffect(() => {
@@ -220,6 +227,10 @@ export default function WalletHistoryScreen() {
         {loading ? (
           <View style={styles.loadingWrap}>
             <ActivityIndicator size="large" color={Palette.neonCyan} />
+          </View>
+        ) : error ? (
+          <View style={styles.emptyWrap}>
+            <NeonText variant="body" tone="rose">{error}</NeonText>
           </View>
         ) : transactions.length === 0 ? (
           <View style={styles.emptyWrap}>

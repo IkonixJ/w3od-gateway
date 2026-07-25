@@ -4,7 +4,7 @@ export { CyberBackground } from './CyberBackground';
 export { NeonText } from './NeonText';
 export { Badge } from './Badge';
 export { NeonInput } from './NeonInput';
-export { SectionHeader } from './SectionHeader';
+export { SectionHeader, LoadingState, ErrorState, EmptyState } from './SectionHeader';
 export { StatCard } from './StatCard';
 export { Divider } from './Divider';
 export { Avatar } from './Avatar';

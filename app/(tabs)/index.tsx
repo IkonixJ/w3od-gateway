@@ -60,43 +60,50 @@ export default function DashboardScreen() {
   const [recentTx, setRecentTx] = useState<TransactionRow[]>([]);
   const [walletLoading, setWalletLoading] = useState(true);
   const [activeCampaigns, setActiveCampaigns] = useState<Campaign[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
     (async () => {
-      const [w, txs, campaigns] = await Promise.all([
-        getMyWallet(),
-        getTransactions({}).then((rows) => rows.slice(0, 5)),
-        getActiveCampaigns().then((c) => c.slice(0, 5)),
-      ]);
-      if (!active) return;
-      setWallet(w);
-      setWalletLoading(false);
-      setActiveCampaigns(campaigns);
-      // Map wallet transactions to the dashboard TransactionItem shape
-      const mapped: TransactionRow[] = txs.map((t) => ({
-        id: t.id,
-        user:
-          t.receiver_id === profile?.id
-            ? t.sender_display_name ?? t.sender_username ?? 'Member'
-            : t.receiver_display_name ?? t.receiver_username ?? 'Member',
-        avatarSeed:
-          t.receiver_id === profile?.id
-            ? t.sender_username ?? 'member'
-            : t.receiver_username ?? 'member',
-        amount: t.amount,
-        type:
-          t.type === 'transfer'
-            ? t.receiver_id === profile?.id
-              ? 'receive'
-              : 'send'
-            : t.type === 'redemption'
-            ? 'redeem'
-            : 'reward',
-        date: t.created_at,
-        status: t.status,
-      }));
-      setRecentTx(mapped);
+      try {
+        const [w, txs, campaigns] = await Promise.all([
+          getMyWallet(),
+          getTransactions({}).then((rows) => rows.slice(0, 5)),
+          getActiveCampaigns().then((c) => c.slice(0, 5)),
+        ]);
+        if (!active) return;
+        setWallet(w);
+        setWalletLoading(false);
+        setActiveCampaigns(campaigns);
+        // Map wallet transactions to the dashboard TransactionItem shape
+        const mapped: TransactionRow[] = txs.map((t) => ({
+          id: t.id,
+          user:
+            t.receiver_id === profile?.id
+              ? t.sender_display_name ?? t.sender_username ?? 'Member'
+              : t.receiver_display_name ?? t.receiver_username ?? 'Member',
+          avatarSeed:
+            t.receiver_id === profile?.id
+              ? t.sender_username ?? 'member'
+              : t.receiver_username ?? 'member',
+          amount: t.amount,
+          type:
+            t.type === 'transfer'
+              ? t.receiver_id === profile?.id
+                ? 'receive'
+                : 'send'
+              : t.type === 'redemption'
+              ? 'redeem'
+              : 'reward',
+          date: t.created_at,
+          status: t.status,
+        }));
+        setRecentTx(mapped);
+      } catch {
+        if (!active) return;
+        setError('Failed to load. Pull to retry.');
+        setWalletLoading(false);
+      }
     })();
     return () => {
       active = false;
@@ -245,6 +252,12 @@ export default function DashboardScreen() {
             {walletLoading ? (
               <View style={styles.listLoading}>
                 <ActivityIndicator color={Palette.neonCyan} size="small" />
+              </View>
+            ) : error ? (
+              <View style={styles.listEmpty}>
+                <NeonText variant="body" tone="rose" style={styles.listEmptyText}>
+                  {error}
+                </NeonText>
               </View>
             ) : recentTx.length === 0 ? (
               <View style={styles.listEmpty}>

@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import {
+  Alert,
   View,
   StyleSheet,
   ScrollView,
@@ -42,6 +43,7 @@ import {
 } from '@/lib/support-service';
 import { TICKET_CATEGORIES, TICKET_STATUS_LABELS, TICKET_STATUS_TONES } from '@/types/support';
 import { Palette, Typography, Spacing, Radii } from '@/design/tokens';
+import { pickFile, fileToDataUrl, canUploadFiles } from '@/lib/file-utils';
 import { wideCardMaxWidth, screenPadding } from '@/design/responsive';
 import type { TicketDetail as TicketDetailType, TicketReply } from '@/types/support';
 
@@ -99,22 +101,20 @@ export default function TicketDetailScreen() {
     loadTicket();
   };
 
-  const handleFileUpload = () => {
+  const handleFileUpload = async () => {
     if (!profile?.id) return;
-    const inputEl = document.createElement('input');
-    inputEl.type = 'file';
-    inputEl.accept = 'image/*,.pdf,.doc,.docx,.zip';
-    inputEl.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      setSending(true);
-      const dataUrl = await fileToDataUrl(file);
-      const { url, error: uploadError } = await uploadTicketAttachment(profile.id, dataUrl, `${Date.now()}-${file.name}`, file.type);
-      setSending(false);
-      if (uploadError || !url) return;
-      setAttachments((prev) => [...prev, url]);
-    };
-    inputEl.click();
+    if (!canUploadFiles()) {
+      Alert.alert('Upload Unavailable', 'File upload is only available on web. Please use a browser to upload files.');
+      return;
+    }
+    const file = await pickFile('image/*,.pdf,.doc,.docx,.zip');
+    if (!file) return;
+    setSending(true);
+    const dataUrl = await fileToDataUrl(file.uri);
+    const { url, error: uploadError } = await uploadTicketAttachment(profile.id, dataUrl, `${Date.now()}-${file.name}`, file.type);
+    setSending(false);
+    if (uploadError || !url) return;
+    setAttachments((prev) => [...prev, url]);
   };
 
   if (loading) {
@@ -301,15 +301,6 @@ function ReplyBubble({ reply, isMe }: { reply: TicketReply; isMe: boolean }) {
       </View>
     </View>
   );
-}
-
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 }
 
 const styles = StyleSheet.create({

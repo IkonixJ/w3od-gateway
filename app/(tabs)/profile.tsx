@@ -64,6 +64,7 @@ import {
   formatDate,
 } from '@/lib/kyc-service';
 import { Palette, Spacing, Typography, Radii, Borders } from '@/design/tokens';
+import { pickFile, fileToDataUrl, canUploadFiles } from '@/lib/file-utils';
 import { wideCardMaxWidth, screenPadding } from '@/design/responsive';
 import type { Wallet } from '@/types/wallet';
 
@@ -209,28 +210,25 @@ export default function ProfileScreen() {
   };
 
   // ─── Avatar upload (web file picker) ───────────────────────────────────────
-  const handleAvatarPress = () => {
+  const handleAvatarPress = async () => {
     if (!profile?.id) return;
-    // Web: trigger a hidden file input
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'image/png,image/jpeg,image/jpg,image/webp';
-    input.onchange = async (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
-      setAvatarUploading(true);
-      const dataUrl = await fileToDataUrl(file);
-      const { url, error } = await uploadAvatar(profile.id, dataUrl, file.type);
-      if (error || !url) {
-        setAvatarUploading(false);
-        Alert.alert('Upload Failed', error ?? 'Could not upload image.');
-        return;
-      }
-      await updateAvatarUrl(profile.id, url);
-      await refreshProfile();
+    if (!canUploadFiles()) {
+      Alert.alert('Upload Unavailable', 'File upload is only available on web. Please use a browser to upload files.');
+      return;
+    }
+    const file = await pickFile('image/png,image/jpeg,image/jpg,image/webp');
+    if (!file) return;
+    setAvatarUploading(true);
+    const dataUrl = await fileToDataUrl(file.uri);
+    const { url, error } = await uploadAvatar(profile.id, dataUrl, file.type);
+    if (error || !url) {
       setAvatarUploading(false);
-    };
-    input.click();
+      Alert.alert('Upload Failed', error ?? 'Could not upload image.');
+      return;
+    }
+    await updateAvatarUrl(profile.id, url);
+    await refreshProfile();
+    setAvatarUploading(false);
   };
 
   // ─── PIN verification ──────────────────────────────────────────────────────
@@ -845,17 +843,6 @@ export default function ProfileScreen() {
       </Modal>
     </ScreenShell>
   );
-}
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────

@@ -4,6 +4,7 @@ import { KeyRound, Copy, Check } from 'lucide-react-native';
 
 import { NeonText } from '@/components/ui';
 import { getLastDevOtp, clearLastDevOtp, type OtpPurpose } from '@/lib/auth-service';
+import { copyToClipboard } from '@/lib/file-utils';
 import { Palette, Typography, Spacing, Radii } from '@/design/tokens';
 
 interface DevOtpHintProps {
@@ -28,13 +29,13 @@ export function DevOtpHint({ purpose, email }: DevOtpHintProps) {
 
   if (!code) return null;
 
-  const handleCopy = () => {
-    setCopied(true);
-    // Web clipboard
-    if (typeof navigator !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(code).catch(() => {});
+  const handleCopy = async () => {
+    if (!code) return;
+    const copied = await copyToClipboard(code);
+    if (copied) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
     }
-    setTimeout(() => setCopied(false), 1500);
   };
 
   return (

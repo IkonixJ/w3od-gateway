@@ -12,6 +12,7 @@ import { ArrowLeft, Gift, Clock, Banknote, Plus, CircleCheck as CheckCircle2, Ca
 
 import { ScreenShell, GlassCard, NeonText, NeonButton, NeonInput, Divider, Badge } from '@/components/ui';
 import { PinConfirmModal } from '@/components/wallet/PinConfirmModal';
+import { KycGate } from '@/components/wallet/KycGate';
 import { useAuth } from '@/context/AuthProvider';
 import {
   getMyWallet,
@@ -198,7 +199,13 @@ export default function WalletRedemptionScreen() {
           </GlassCard>
         )}
 
+        {/* KYC gate — redemptions locked until verified */}
+        {profile?.kyc_status !== 'verified' && (
+          <KycGate feature="redeeming W3OD for payouts" />
+        )}
+
         {/* Submit redemption form */}
+        {profile?.kyc_status === 'verified' && (
         <GlassCard tone="amber" gradientBorder padding={Spacing['6']} style={styles.formCard}>
           <NeonText variant="heading" weight="semiBold" tone="amber" style={styles.sectionTitle}>
             NEW REDEMPTION REQUEST
@@ -255,8 +262,10 @@ export default function WalletRedemptionScreen() {
             Submit Redemption
           </NeonButton>
         </GlassCard>
+        )}
 
         {/* Redemption history */}
+        {profile?.kyc_status === 'verified' && (
         <View style={styles.historySection}>
           <NeonText variant="heading" weight="semiBold" tone="amber" style={styles.historyTitle}>
             REDEMPTION HISTORY
@@ -300,13 +309,16 @@ export default function WalletRedemptionScreen() {
             </GlassCard>
           )}
         </View>
+        )}
 
+        {profile?.kyc_status === 'verified' && (
         <View style={styles.noticeBox}>
           <AlertCircle color={Palette.textTertiary} size={14} />
           <NeonText variant="body" tone="muted" style={styles.noticeText}>
             Pending redemption funds cannot be spent or transferred until processed.
           </NeonText>
         </View>
+        )}
 
         <View style={styles.footerSpace} />
       </ScrollView>

@@ -21,6 +21,7 @@ import {
   Divider,
 } from '@/components/ui';
 import { PinConfirmModal } from '@/components/wallet/PinConfirmModal';
+import { KycGate } from '@/components/wallet/KycGate';
 import { useAuth } from '@/context/AuthProvider';
 import { lookupRecipient, transferW3od, formatW3od, getWalletLimits } from '@/lib/wallet-service';
 import { Palette, Typography, Spacing, Radii } from '@/design/tokens';
@@ -159,8 +160,13 @@ export default function WalletSendScreen() {
             <StepDot active={stage === 'review' || stage === 'success'} done={stage === 'success'} label="Confirm" />
           </View>
 
+          {/* KYC gate — transfers locked until verified */}
+          {profile?.kyc_status !== 'verified' && stage === 'recipient' && (
+            <KycGate feature="sending W3OD to other members" />
+          )}
+
           {/* ─── Stage: Recipient ─── */}
-          {stage === 'recipient' && (
+          {stage === 'recipient' && profile?.kyc_status === 'verified' && (
             <GlassCard tone="cyan" gradientBorder padding={Spacing['6']} style={styles.card}>
               <NeonText variant="heading" weight="semiBold" tone="cyan" style={styles.stageTitle}>
                 WHO ARE YOU SENDING TO?

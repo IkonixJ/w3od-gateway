@@ -17,6 +17,7 @@ import {
   User,
   LogOut,
   ShieldCheck,
+  ShieldAlert,
   Award,
   Zap,
   Fingerprint,
@@ -30,6 +31,14 @@ import {
   Phone,
   Trash2,
   RotateCw,
+  Camera,
+  Edit3,
+  Save,
+  Calendar,
+  Hash,
+  Trophy,
+  IdCard,
+  type LucideIcon,
 } from 'lucide-react-native';
 
 import { ScreenShell, GlassCard, NeonText, Badge, NeonButton, NeonInput, Avatar, StatCard, Divider } from '@/components/ui';
@@ -42,8 +51,19 @@ import {
   type BiometricAvailability,
 } from '@/lib/biometric';
 import { getDeviceName } from '@/lib/device';
+import { getLevelInfo, getRankColor } from '@/lib/wallet';
+import { getMyWallet } from '@/lib/wallet-service';
+import {
+  uploadAvatar,
+  updateAvatarUrl,
+  updateProfile,
+  kycStatusLabel,
+  kycStatusTone,
+  formatDate,
+} from '@/lib/kyc-service';
 import { Palette, Spacing, Typography, Radii, Borders } from '@/design/tokens';
 import { wideCardMaxWidth, screenPadding } from '@/design/responsive';
+import type { Wallet } from '@/types/wallet';
 
 interface TrustedDeviceRow {
   id: string;
@@ -66,10 +86,16 @@ export default function ProfileScreen() {
   const [bioAvail, setBioAvail] = useState<BiometricAvailability | null>(null);
   const [bioBusy, setBioBusy] = useState(false);
   const [usernameModal, setUsernameModal] = useState(false);
+  const [editProfileModal, setEditProfileModal] = useState(false);
   const [pinModal, setPinModal] = useState(false);
   const [devices, setDevices] = useState<TrustedDeviceRow[]>([]);
   const [devicesLoading, setDevicesLoading] = useState(true);
   const [removeBusyId, setRemoveBusyId] = useState<string | null>(null);
+  const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+
+  const levelInfo = getLevelInfo(profile?.xp ?? 0);
+  const rankColor = getRankColor(levelInfo.level);
 
   useEffect(() => {
     checkBiometricAvailability().then(setBioAvail);
@@ -87,6 +113,10 @@ export default function ProfileScreen() {
     loadDevices();
   }, [loadDevices]);
 
+  useEffect(() => {
+    getMyWallet().then(setWallet);
+  }, []);
+
   // ─── Biometrics toggle ─────────────────────────────────────────────────────
   const handleBiometricToggle = useCallback(async () => {
     if (!bioAvail?.available) return;
@@ -94,7 +124,6 @@ export default function ProfileScreen() {
     const next = !profile?.biometric_enabled;
 
     if (next) {
-      // Enabling — verify the user's biometric first
       const auth = await authenticateWithBiometrics('Enable biometric sign-in');
       if (!auth.success) {
         setBioBusy(false);
@@ -144,7 +173,65 @@ export default function ProfileScreen() {
     }
   };
 
-  // ─── PIN verification (for sensitive actions demo) ────────────────────────
+  // ─── Edit profile (bio, full name, phone) ──────────────────────────────────
+  const [editBio, setEditBio] = useState('');
+  const [editFullName, setEditFullName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+
+  const openEditProfileModal = () => {
+    setEditBio(profile?.bio ?? '');
+    setEditFullName(profile?.full_name ?? '');
+    setEditPhone(profile?.phone ?? '');
+    setProfileError(null);
+    setEditProfileModal(true);
+  };
+
+  const handleSaveProfile = async () => {
+    if (!profile?.id) return;
+    setProfileSaving(true);
+    setProfileError(null);
+    const { error } = await updateProfile(profile.id, {
+      bio: editBio,
+      full_name: editFullName,
+      phone: editPhone,
+    });
+    setProfileSaving(false);
+    if (error) {
+      setProfileError(error);
+    } else {
+      await refreshProfile();
+      setEditProfileModal(false);
+    }
+  };
+
+  // ─── Avatar upload (web file picker) ───────────────────────────────────────
+  const handleAvatarPress = () => {
+    if (!profile?.id) return;
+    // Web: trigger a hidden file input
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/png,image/jpeg,image/jpg,image/webp';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      setAvatarUploading(true);
+      const dataUrl = await fileToDataUrl(file);
+      const { url, error } = await uploadAvatar(profile.id, dataUrl, file.type);
+      if (error || !url) {
+        setAvatarUploading(false);
+        Alert.alert('Upload Failed', error ?? 'Could not upload image.');
+        return;
+      }
+      await updateAvatarUrl(profile.id, url);
+      await refreshProfile();
+      setAvatarUploading(false);
+    };
+    input.click();
+  };
+
+  // ─── PIN verification ──────────────────────────────────────────────────────
   const [pinEntry, setPinEntry] = useState('');
   const [pinResult, setPinResult] = useState<string | null>(null);
 
@@ -183,6 +270,14 @@ export default function ProfileScreen() {
     );
   }
 
+  const kycTone = kycStatusTone(profile.kyc_status);
+  const initials = (profile.display_name ?? profile.username ?? '?')
+    .split(/[ _-]+/)
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
   return (
     <ScreenShell variant="deep">
       <ScrollView
@@ -191,16 +286,22 @@ export default function ProfileScreen() {
       >
         {/* ─── Identity Card ─────────────────────────────────────────────── */}
         <GlassCard tone="cyan" gradientBorder padding={Spacing['6']} style={styles.card}>
+          {/* Avatar with upload overlay */}
           <View style={styles.identityRow}>
-            <Avatar
-              uri={profile.avatar_url}
-              displayName={profile.display_name}
-              size="xl"
-            />
+            <Pressable onPress={handleAvatarPress} disabled={avatarUploading} style={styles.avatarWrap}>
+              <Avatar uri={profile.avatar_url} displayName={profile.display_name} size="xl" />
+              <View style={styles.avatarCameraBtn}>
+                {avatarUploading ? (
+                  <ActivityIndicator color={Palette.neonCyan} size={12} />
+                ) : (
+                  <Camera color={Palette.bg950} size={14} strokeWidth={2.5} />
+                )}
+              </View>
+            </Pressable>
             <View style={styles.identityMeta}>
               <View style={styles.nameRow}>
                 <NeonText variant="heading" weight="semiBold" tone="cyan" style={styles.displayName}>
-                  {profile.display_name ?? 'Unregistered Agent'}
+                  {profile.full_name ?? profile.display_name ?? 'Unregistered Agent'}
                 </NeonText>
                 {profile.email_verified && (
                   <ShieldCheck color={Palette.success} size={16} />
@@ -211,15 +312,37 @@ export default function ProfileScreen() {
                   @{profile.username}
                 </NeonText>
               )}
-              <Badge
-                tone={profile.role === 'admin' ? 'rose' : profile.role === 'moderator' ? 'amber' : 'cyan'}
-                style={styles.roleBadge}
-              >
-                {profile.role.toUpperCase()}
-              </Badge>
+              <View style={styles.badgeRow}>
+                <Badge
+                  tone={profile.role === 'admin' ? 'rose' : profile.role === 'moderator' ? 'amber' : 'cyan'}
+                  style={styles.roleBadge}
+                >
+                  {profile.role.toUpperCase()}
+                </Badge>
+                <Badge tone={kycTone}>
+                  KYC: {kycStatusLabel(profile.kyc_status).toUpperCase()}
+                </Badge>
+              </View>
             </View>
           </View>
 
+          {/* Bio */}
+          {profile.bio ? (
+            <View style={styles.bioBox}>
+              <NeonText variant="body" tone="muted" style={styles.bioText}>
+                {profile.bio}
+              </NeonText>
+            </View>
+          ) : null}
+
+          <Pressable onPress={openEditProfileModal} style={styles.editProfileBtn}>
+            <Edit3 color={Palette.neonCyan} size={15} />
+            <NeonText variant="body" weight="semiBold" tone="cyan" style={styles.editProfileText}>
+              Edit Profile
+            </NeonText>
+          </Pressable>
+
+          {/* Info grid */}
           <View style={styles.infoGrid}>
             <InfoChip
               icon={<Mail color={Palette.textTertiary} size={14} />}
@@ -241,6 +364,50 @@ export default function ProfileScreen() {
               label="Phone"
               value={profile.phone ?? 'Not set'}
             />
+            <InfoChip
+              icon={<Hash color={Palette.textTertiary} size={14} />}
+              label="W3OD Account"
+              value={wallet?.account_number ?? '—'}
+            />
+            <InfoChip
+              icon={<Calendar color={Palette.textTertiary} size={14} />}
+              label="Member Since"
+              value={formatDate(profile.created_at)}
+            />
+          </View>
+        </GlassCard>
+
+        {/* ─── Level + XP + Rank ─────────────────────────────────────────── */}
+        <GlassCard tone="cyan" gradientBorder padding={Spacing['5']} style={styles.sectionCard}>
+          <View style={styles.levelHeader}>
+            <View style={styles.levelIconWrap}>
+              <Trophy color={rankColor as string} size={18} />
+            </View>
+            <View style={styles.levelMeta}>
+              <NeonText variant="heading" weight="semiBold" tone="cyan" style={styles.levelRank}>
+                {levelInfo.rank}
+              </NeonText>
+              <NeonText variant="body" tone="muted" style={styles.levelSub}>
+                Level {levelInfo.level} · {levelInfo.xpIntoLevel}/{levelInfo.xpForNext} XP
+              </NeonText>
+            </View>
+          </View>
+          {/* XP progress bar */}
+          <View style={styles.xpBarTrack}>
+            <View
+              style={[
+                styles.xpBarFill,
+                { width: `${Math.round(levelInfo.progress * 100)}%`, backgroundColor: rankColor as string },
+              ]}
+            />
+          </View>
+          <View style={styles.xpRow}>
+            <NeonText variant="body" tone="muted" style={styles.xpLabel}>
+              {profile.xp.toLocaleString()} XP TOTAL
+            </NeonText>
+            <NeonText variant="body" tone="muted" style={styles.xpLabel}>
+              {Math.round(levelInfo.progress * 100)}%
+            </NeonText>
           </View>
         </GlassCard>
 
@@ -260,24 +427,54 @@ export default function ProfileScreen() {
           />
         </View>
 
-        <View style={styles.statusRow}>
-          <ShieldCheck
-            color={profile.kyc_status === 'verified' ? Palette.neonLime : Palette.neonAmber}
-            size={16}
+        {/* ─── Verification status ───────────────────────────────────────── */}
+        <SectionTitle title="Verification" tone="cyan" />
+        <GlassCard tone="cyan" padding={Spacing['5']} style={styles.sectionCard}>
+          <SettingRow
+            icon={<ShieldCheck color={Palette.neonCyan} size={20} />}
+            title="KYC Verification"
+            subtitle={kycStatusLabel(profile.kyc_status)}
+            rightElement={
+              <Pressable onPress={() => router.push('/(tabs)/kyc')} hitSlop={10}>
+                <View style={styles.kycActionRow}>
+                  <NeonText variant="body" weight="semiBold" tone={kycTone}>
+                    {profile.kyc_status === 'verified' ? 'View' : 'Verify'}
+                  </NeonText>
+                  <ChevronRight color={Palette.textTertiary} size={20} />
+                </View>
+              </Pressable>
+            }
           />
-          <Badge tone={profile.kyc_status === 'verified' ? 'lime' : 'amber'}>
-            KYC: {profile.kyc_status.toUpperCase()}
-          </Badge>
-          <Badge tone={profile.email_verified ? 'lime' : 'amber'}>
-            {profile.email_verified ? 'EMAIL VERIFIED' : 'EMAIL PENDING'}
-          </Badge>
-        </View>
+          <Divider tone="white" />
+          <SettingRow
+            icon={<Mail color={Palette.neonCyan} size={20} />}
+            title="Email Verification"
+            subtitle={profile.email_verified ? 'Verified' : 'Pending'}
+            rightElement={
+              <Badge tone={profile.email_verified ? 'lime' : 'amber'}>
+                {profile.email_verified ? 'VERIFIED' : 'PENDING'}
+              </Badge>
+            }
+          />
+        </GlassCard>
+
+        {/* ─── Badges ────────────────────────────────────────────────────── */}
+        <SectionTitle title="Badges" tone="amber" />
+        <GlassCard tone="amber" padding={Spacing['5']} style={styles.sectionCard}>
+          <View style={styles.badgesRow}>
+            <BadgeTile icon={Award} label="Founders" rarity="legendary" color={Palette.neonAmber} />
+            <BadgeTile icon={Zap} label="Early Adopter" rarity="rare" color={Palette.neonCyan} />
+            <BadgeTile icon={ShieldCheck} label="Verified" rarity="epic" color={Palette.neonLime} earned={profile.kyc_status === 'verified'} />
+          </View>
+          <NeonText variant="body" tone="muted" style={styles.badgesHint}>
+            Earn more badges by completing campaigns, events, and community challenges.
+          </NeonText>
+        </GlassCard>
 
         {/* ─── Security Settings ─────────────────────────────────────────── */}
         <SectionTitle title="Security" tone="cyan" />
 
         <GlassCard tone="cyan" padding={Spacing['5']} style={styles.sectionCard}>
-          {/* Biometric toggle */}
           <SettingRow
             icon={<Fingerprint color={Palette.neonCyan} size={20} />}
             title="Biometric Sign-In"
@@ -305,7 +502,6 @@ export default function ProfileScreen() {
 
           <Divider tone="white" />
 
-          {/* Username change */}
           <SettingRow
             icon={<AtSign color={Palette.neonCyan} size={20} />}
             title="Change Username"
@@ -319,7 +515,6 @@ export default function ProfileScreen() {
 
           <Divider tone="white" />
 
-          {/* PIN status */}
           <SettingRow
             icon={<Lock color={Palette.neonCyan} size={20} />}
             title="Transaction PIN"
@@ -481,6 +676,77 @@ export default function ProfileScreen() {
         </KeyboardAvoidingView>
       </Modal>
 
+      {/* ─── Edit Profile Modal ─────────────────────────────────────────── */}
+      <Modal visible={editProfileModal} transparent animationType="fade" onRequestClose={() => setEditProfileModal(false)}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'web' ? undefined : 'padding'}
+          style={styles.modalOverlay}
+        >
+          <View style={styles.modalBackdrop} />
+          <GlassCard tone="cyan" gradientBorder padding={Spacing['6']} style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <NeonText variant="heading" weight="semiBold" tone="cyan">
+                EDIT PROFILE
+              </NeonText>
+              <Pressable onPress={() => setEditProfileModal(false)} hitSlop={10}>
+                <X color={Palette.textTertiary} size={20} />
+              </Pressable>
+            </View>
+            <NeonInput
+              label="Full Name"
+              value={editFullName}
+              onChangeText={setEditFullName}
+              placeholder="Jane Doe"
+              leftIcon={<User color={Palette.textTertiary} size={18} />}
+              tone="cyan"
+              autoCapitalize="words"
+            />
+            <NeonInput
+              label="Phone Number"
+              value={editPhone}
+              onChangeText={setEditPhone}
+              placeholder="+234 800 000 0000"
+              leftIcon={<Phone color={Palette.textTertiary} size={18} />}
+              tone="cyan"
+              keyboardType="phone-pad"
+              style={styles.modalField}
+            />
+            <NeonInput
+              label="Bio"
+              value={editBio}
+              onChangeText={setEditBio}
+              placeholder="Tell the community about yourself..."
+              tone="cyan"
+              multiline
+              style={styles.modalField}
+            />
+            {profileError && (
+              <View style={styles.profileErrorBox}>
+                <NeonText variant="body" weight="medium" tone="rose">
+                  {profileError}
+                </NeonText>
+              </View>
+            )}
+            <View style={styles.modalActions}>
+              <NeonButton variant="ghost" onPress={() => setEditProfileModal(false)}>
+                Cancel
+              </NeonButton>
+              <View style={styles.flex1}>
+                <NeonButton
+                  variant="cyan"
+                  fullWidth
+                  loading={profileSaving}
+                  onPress={handleSaveProfile}
+                  leftIcon={<Save color="#03121A" size={16} />}
+                >
+                  Save Changes
+                </NeonButton>
+              </View>
+            </View>
+          </GlassCard>
+        </KeyboardAvoidingView>
+      </Modal>
+
       {/* ─── PIN Verify Modal ────────────────────────────────────────────── */}
       <Modal visible={pinModal} transparent animationType="fade" onRequestClose={() => setPinModal(false)}>
         <View style={styles.modalOverlay}>
@@ -553,6 +819,17 @@ export default function ProfileScreen() {
   );
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function InfoChip({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
@@ -569,8 +846,37 @@ function InfoChip({ icon, label, value }: { icon: React.ReactNode; label: string
   );
 }
 
-function SectionTitle({ title, tone }: { title: string; tone: 'cyan' | 'magenta' }) {
-  const color = tone === 'cyan' ? Palette.neonCyan : Palette.neonMagenta;
+function BadgeTile({
+  icon: Icon,
+  label,
+  rarity,
+  color,
+  earned = true,
+}: {
+  icon: LucideIcon;
+  label: string;
+  rarity: string;
+  color: string;
+  earned?: boolean;
+}) {
+  return (
+    <View style={[styles.badgeTile, { opacity: earned ? 1 : 0.3 }]}>
+      <View style={[styles.badgeTileIcon, { backgroundColor: `${color}20`, borderColor: color }]}>
+        <Icon color={color} size={22} />
+      </View>
+      <NeonText variant="body" weight="semiBold" tone="amber" style={styles.badgeTileLabel}>
+        {label}
+      </NeonText>
+      <NeonText variant="body" tone="muted" style={styles.badgeTileRarity}>
+        {rarity.toUpperCase()}
+      </NeonText>
+    </View>
+  );
+}
+
+function SectionTitle({ title, tone }: { title: string; tone: 'cyan' | 'magenta' | 'amber' }) {
+  const color =
+    tone === 'cyan' ? Palette.neonCyan : tone === 'magenta' ? Palette.neonMagenta : Palette.neonAmber;
   return (
     <View style={styles.sectionTitleRow}>
       <View style={[styles.sectionTitleAccent, { backgroundColor: color }]} />
@@ -636,6 +942,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: Spacing['4'],
   },
+  avatarWrap: {
+    position: 'relative',
+  },
+  avatarCameraBtn: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: Palette.neonCyan,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: Palette.bg950,
+  },
   identityMeta: {
     flex: 1,
     gap: Spacing['1'],
@@ -651,8 +973,38 @@ const styles = StyleSheet.create({
   username: {
     fontSize: Typography.sizes.sm,
   },
-  roleBadge: {
+  badgeRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing['2'],
     marginTop: Spacing['1'],
+  },
+  roleBadge: {
+    marginTop: 0,
+  },
+  bioBox: {
+    backgroundColor: Palette.glass300,
+    borderRadius: Radii.md,
+    padding: Spacing['3'],
+  },
+  bioText: {
+    fontSize: Typography.sizes.sm,
+    lineHeight: 20,
+  },
+  editProfileBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing['2'],
+    alignSelf: 'flex-start',
+    paddingVertical: Spacing['2'],
+    paddingHorizontal: Spacing['3'],
+    backgroundColor: 'rgba(0,240,255,0.08)',
+    borderRadius: Radii.md,
+    borderWidth: 1,
+    borderColor: 'rgba(0,240,255,0.2)',
+  },
+  editProfileText: {
+    fontSize: Typography.sizes.sm,
   },
   infoGrid: {
     flexDirection: 'row',
@@ -690,6 +1042,49 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.sm,
     color: Palette.textSecondary,
   },
+  levelHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing['3'],
+  },
+  levelIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: Radii.md,
+    backgroundColor: Palette.glass300,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  levelMeta: {
+    flex: 1,
+    gap: 2,
+  },
+  levelRank: {
+    fontSize: Typography.sizes.md,
+  },
+  levelSub: {
+    fontSize: Typography.sizes.xs,
+  },
+  xpBarTrack: {
+    height: 8,
+    backgroundColor: Palette.glass300,
+    borderRadius: Radii.full,
+    overflow: 'hidden',
+    marginTop: Spacing['3'],
+  },
+  xpBarFill: {
+    height: '100%',
+    borderRadius: Radii.full,
+  },
+  xpRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: Spacing['2'],
+  },
+  xpLabel: {
+    fontSize: Typography.sizes.xs,
+    letterSpacing: Typography.letterSpacings.wide,
+  },
   statsRow: {
     flexDirection: 'row',
     gap: Spacing['3'],
@@ -697,14 +1092,41 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
-  statusRow: {
+  kycActionRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: Spacing['1'],
+  },
+  badgesRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
     gap: Spacing['2'],
-    maxWidth: wideCardMaxWidth,
-    width: '100%',
-    alignSelf: 'center',
-    flexWrap: 'wrap',
+  },
+  badgeTile: {
+    alignItems: 'center',
+    gap: Spacing['2'],
+    flex: 1,
+  },
+  badgeTileIcon: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeTileLabel: {
+    fontSize: Typography.sizes.xs,
+    textAlign: 'center',
+  },
+  badgeTileRarity: {
+    fontSize: 10,
+  },
+  badgesHint: {
+    fontSize: Typography.sizes.xs,
+    textAlign: 'center',
+    marginTop: Spacing['3'],
+    lineHeight: 16,
   },
   sectionTitleRow: {
     flexDirection: 'row',
@@ -815,6 +1237,9 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.sm,
     lineHeight: 20,
   },
+  modalField: {
+    marginTop: Spacing['2'],
+  },
   modalActions: {
     flexDirection: 'row',
     gap: Spacing['3'],
@@ -827,5 +1252,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: Radii.md,
     padding: Spacing['3'],
+  },
+  profileErrorBox: {
+    backgroundColor: 'rgba(255,45,111,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,45,111,0.3)',
+    borderRadius: Radii.md,
+    padding: Spacing['3'],
+    alignItems: 'center',
   },
 });

@@ -9,6 +9,7 @@ import {
   Bell,
   User,
   ShieldAlert,
+  ShieldCheck,
 } from 'lucide-react-native';
 
 import { useAuth } from '@/context/AuthProvider';
@@ -125,6 +126,26 @@ export default function TabLayout() {
         name="admin"
         options={{
           title: 'Admin',
+          tabBarIcon: ({ color, size, focused }) => (
+            <ShieldAlert color={color} size={size} strokeWidth={focused ? 2.4 : 2} />
+          ),
+          href: isAdmin ? null : undefined,
+        }}
+      />
+      <Tabs.Screen
+        name="kyc"
+        options={{
+          title: 'KYC',
+          tabBarIcon: ({ color, size, focused }) => (
+            <ShieldCheck color={color} size={size} strokeWidth={focused ? 2.4 : 2} />
+          ),
+          href: null,
+        }}
+      />
+      <Tabs.Screen
+        name="admin-kyc"
+        options={{
+          title: 'KYC Review',
           tabBarIcon: ({ color, size, focused }) => (
             <ShieldAlert color={color} size={size} strokeWidth={focused ? 2.4 : 2} />
           ),

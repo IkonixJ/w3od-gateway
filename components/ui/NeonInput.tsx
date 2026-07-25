@@ -29,6 +29,8 @@ interface NeonInputProps {
   tone?: InputTone;
   error?: string | null;
   style?: ViewStyle;
+  multiline?: boolean;
+  numberOfLines?: number;
   onSubmitEditing?: () => void;
 }
 
@@ -62,6 +64,8 @@ export function NeonInput({
   tone = 'cyan',
   error = null,
   style,
+  multiline = false,
+  numberOfLines = 3,
   onSubmitEditing,
 }: NeonInputProps) {
   const [focused, setFocused] = useState(false);
@@ -95,7 +99,7 @@ export function NeonInput({
       >
         {leftIcon && <View style={styles.leftIcon}>{leftIcon}</View>}
         <TextInput
-          style={styles.input}
+          style={[styles.input, multiline && styles.inputMultiline]}
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
@@ -104,6 +108,9 @@ export function NeonInput({
           keyboardType={keyboardType}
           autoCapitalize={autoCapitalize}
           autoCorrect={autoCorrect}
+          multiline={multiline}
+          numberOfLines={multiline ? numberOfLines : undefined}
+          textAlignVertical={multiline ? 'top' : 'center'}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           onSubmitEditing={onSubmitEditing}
@@ -143,7 +150,7 @@ const styles = StyleSheet.create({
     borderWidth: Borders.thin,
     borderRadius: Radii.md,
     paddingHorizontal: Spacing['4'],
-    height: 54,
+    minHeight: 54,
   },
   leftIcon: {
     marginRight: Spacing['3'],
@@ -157,6 +164,11 @@ const styles = StyleSheet.create({
     fontFamily: Typography.families.bodyRegular,
     fontSize: Typography.sizes.base,
     height: '100%',
+  },
+  inputMultiline: {
+    minHeight: 80,
+    paddingVertical: Spacing['3'],
+    height: 'auto',
   },
   errorText: {
     fontFamily: Typography.families.bodyMedium,

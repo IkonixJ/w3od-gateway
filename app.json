@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "W3OD Gateway",
+    "slug": "w3od-gateway",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "w3od",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "backgroundColor": "#05060A",
+    "splash": {
+      "backgroundColor": "#05060A",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "backgroundColor": "#05060A"
+    },
+    "android": {
+      "backgroundColor": "#05060A",
+      "softwareKeyboardLayoutMode": "pan"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/images/favicon.png",
+      "backgroundColor": "#05060A",
+      "themeColor": "#00F0FF"
+    },
+    "plugins": ["expo-router", "expo-font", "expo-web-browser"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

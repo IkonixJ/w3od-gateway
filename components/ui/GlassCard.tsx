@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 import { Palette, Radii, Shadows, Borders } from '@/design/tokens';
 
-type NeonTone = 'cyan' | 'blue' | 'purple' | 'magenta' | 'lime' | 'amber' | 'none';
+type NeonTone = 'cyan' | 'blue' | 'purple' | 'magenta' | 'lime' | 'amber' | 'rose' | 'none';
 
 interface GlassCardProps {
   children: ReactNode;
@@ -26,6 +26,7 @@ const BORDER_COLOR: Record<NeonTone, string> = {
   magenta: 'rgba(255,0,229,0.30)',
   lime: 'rgba(182,255,0,0.30)',
   amber: 'rgba(255,184,0,0.30)',
+  rose: 'rgba(255,45,111,0.30)',
   none: 'rgba(255,255,255,0.08)',
 };
 
@@ -36,6 +37,7 @@ const GLOW_COLOR: Record<NeonTone, string> = {
   magenta: '#FF00E5',
   lime: '#B6FF00',
   amber: '#FFB800',
+  rose: '#FF2D6F',
   none: 'transparent',
 };
 
@@ -46,6 +48,7 @@ const BORDER_GRADIENTS: Record<Exclude<NeonTone, 'none'>, [string, string]> = {
   magenta: ['rgba(255,0,229,0.6)', 'rgba(138,43,226,0.2)'],
   lime: ['rgba(182,255,0,0.6)', 'rgba(0,240,255,0.2)'],
   amber: ['rgba(255,184,0,0.6)', 'rgba(255,45,111,0.2)'],
+  rose: ['rgba(255,45,111,0.6)', 'rgba(255,0,229,0.2)'],
 };
 
 export function GlassCard({

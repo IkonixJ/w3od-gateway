@@ -1,5 +1,5 @@
-import { useCallback, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   Send,
@@ -27,12 +27,14 @@ import { TransactionItem } from '@/components/dashboard/TransactionItem';
 import { NotificationPreview } from '@/components/dashboard/NotificationPreview';
 import { useAuth } from '@/context/AuthProvider';
 import { getLevelInfo } from '@/lib/wallet';
+import { getMyWallet, getTransactions } from '@/lib/wallet-service';
 import {
   PLACEHOLDER_CAMPAIGNS,
-  PLACEHOLDER_TRANSACTIONS,
   PLACEHOLDER_NOTIFICATIONS,
-  PLACEHOLDER_BALANCE,
 } from '@/lib/dashboard-data';
+import type { Wallet } from '@/types/wallet';
+import type { TransactionWithProfiles } from '@/types/wallet';
+import type { TransactionRow } from '@/types/dashboard';
 import { Palette, Typography, Spacing, Radii } from '@/design/tokens';
 import { wideCardMaxWidth, screenPadding } from '@/design/responsive';
 
@@ -61,22 +63,80 @@ export default function DashboardScreen() {
   const firstName = useMemo(() => getFirstName(profile ?? {}), [profile]);
   const isVerified = profile?.kyc_status === 'verified';
 
+  const [wallet, setWallet] = useState<Wallet | null>(null);
+  const [recentTx, setRecentTx] = useState<TransactionRow[]>([]);
+  const [walletLoading, setWalletLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const [w, txs] = await Promise.all([
+        getMyWallet(),
+        getTransactions({}).then((rows) => rows.slice(0, 5)),
+      ]);
+      if (!active) return;
+      setWallet(w);
+      setWalletLoading(false);
+      // Map wallet transactions to the dashboard TransactionItem shape
+      const mapped: TransactionRow[] = txs.map((t) => ({
+        id: t.id,
+        user:
+          t.receiver_id === profile?.id
+            ? t.sender_display_name ?? t.sender_username ?? 'Member'
+            : t.receiver_display_name ?? t.receiver_username ?? 'Member',
+        avatarSeed:
+          t.receiver_id === profile?.id
+            ? t.sender_username ?? 'member'
+            : t.receiver_username ?? 'member',
+        amount: t.amount,
+        type:
+          t.type === 'transfer'
+            ? t.receiver_id === profile?.id
+              ? 'receive'
+              : 'send'
+            : t.type === 'redemption'
+            ? 'redeem'
+            : 'reward',
+        date: t.created_at,
+        status: t.status,
+      }));
+      setRecentTx(mapped);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [profile?.id]);
+
+  const displayBalance = wallet?.balance ?? 0;
+
   const handleQuickAction = useCallback((action: string) => {
     switch (action) {
+      case 'send':
+        router.push('/(tabs)/wallet/send');
+        break;
+      case 'receive':
+        router.push('/(tabs)/wallet/receive');
+        break;
+      case 'redeem':
+        router.push('/(tabs)/wallet/redemption');
+        break;
       case 'history':
-        router.push('/(tabs)/wallet');
+        router.push('/(tabs)/wallet/history');
         break;
       case 'earn':
         router.push('/(tabs)/campaigns');
         break;
+      case 'more':
+        router.push('/(tabs)/wallet');
+        break;
       default:
-        // Send/Receive/Redeem/More — wallet module not built yet
+        router.push('/(tabs)/wallet');
         break;
     }
   }, [router]);
 
   const handleViewAllTransactions = useCallback(() => {
-    router.push('/(tabs)/wallet');
+    router.push('/(tabs)/wallet/history');
   }, [router]);
 
   const handleViewAllNotifications = useCallback(() => {
@@ -123,7 +183,7 @@ export default function DashboardScreen() {
         {/* ─── Wallet Card ───────────────────────────────────────────── */}
         <View style={styles.section}>
           <WalletCard
-            balance={PLACEHOLDER_BALANCE}
+            balance={displayBalance}
             xp={profile?.xp ?? 0}
             levelInfo={levelInfo}
           />
@@ -165,12 +225,25 @@ export default function DashboardScreen() {
             onAction={handleViewAllTransactions}
           />
           <GlassCard tone="cyan" gradientBorder padding={Spacing['4']} style={styles.listCard}>
-            {PLACEHOLDER_TRANSACTIONS.slice(0, 5).map((tx, idx) => (
-              <View key={tx.id}>
-                {idx > 0 && <Divider tone="white" />}
-                <TransactionItem tx={tx} />
+            {walletLoading ? (
+              <View style={styles.listLoading}>
+                <ActivityIndicator color={Palette.neonCyan} size="small" />
               </View>
-            ))}
+            ) : recentTx.length === 0 ? (
+              <View style={styles.listEmpty}>
+                <Gift color={Palette.textTertiary} size={28} />
+                <NeonText variant="body" tone="muted" style={styles.listEmptyText}>
+                  No transactions yet
+                </NeonText>
+              </View>
+            ) : (
+              recentTx.map((tx, idx) => (
+                <View key={tx.id}>
+                  {idx > 0 && <Divider tone="white" />}
+                  <TransactionItem tx={tx} />
+                </View>
+              ))
+            )}
           </GlassCard>
         </View>
 
@@ -285,6 +358,18 @@ const styles = StyleSheet.create({
   },
   listCard: {
     gap: 0,
+  },
+  listLoading: {
+    alignItems: 'center',
+    paddingVertical: Spacing['6'],
+  },
+  listEmpty: {
+    alignItems: 'center',
+    gap: Spacing['2'],
+    paddingVertical: Spacing['6'],
+  },
+  listEmptyText: {
+    fontSize: Typography.sizes.sm,
   },
   sectionTitleRow: {
     flexDirection: 'row',

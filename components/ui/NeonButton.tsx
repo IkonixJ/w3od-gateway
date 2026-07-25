@@ -11,7 +11,7 @@ import Animated, {
 
 import { Palette, Typography, Radii, Animation, Gradients } from '@/design/tokens';
 
-type ButtonVariant = 'cyan' | 'blue' | 'purple' | 'magenta' | 'success' | 'danger' | 'ghost' | 'outline';
+type ButtonVariant = 'cyan' | 'blue' | 'purple' | 'magenta' | 'amber' | 'success' | 'danger' | 'ghost' | 'outline';
 type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface NeonButtonProps {
@@ -32,6 +32,7 @@ const GRADIENT_MAP: Record<Exclude<ButtonVariant, 'ghost' | 'outline'>, readonly
   blue: Gradients.blue,
   purple: Gradients.purple,
   magenta: Gradients.magenta,
+  amber: Gradients.brandGold,
   success: Gradients.success,
   danger: Gradients.danger,
 };
@@ -41,6 +42,7 @@ const GLOW_COLOR: Record<ButtonVariant, string> = {
   blue: '#1E90FF',
   purple: '#8A2BE2',
   magenta: '#FF00E5',
+  amber: '#FFB800',
   success: '#00FF9C',
   danger: '#FF2D6F',
   ghost: '#00F0FF',
@@ -52,6 +54,7 @@ const TEXT_COLOR: Record<ButtonVariant, string> = {
   blue: '#FFFFFF',
   purple: '#FFFFFF',
   magenta: '#1A0017',
+  amber: '#1A1200',
   success: '#021810',
   danger: '#FFFFFF',
   ghost: Palette.neonCyan,

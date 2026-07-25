@@ -1,5 +1,7 @@
 import { useEffect } from 'react';
-import { View, Image, StyleSheet, type ViewStyle } from 'react-native';
+import { View, StyleSheet, type ViewStyle } from 'react-native';
+import Svg, { Defs, RadialGradient, Path, Stop, Circle } from 'react-native-svg';
+import { NeonText } from '@/components/ui/NeonText';
 import Animated, {
   useAnimatedStyle,
   withRepeat,
@@ -9,7 +11,7 @@ import Animated, {
   cancelAnimation,
 } from 'react-native-reanimated';
 
-const LOGO_SOURCE = require('@/assets/images/file_000000000e34720a97c50ff6c15230ed.png');
+const AnimatedView = Animated.View;
 
 interface W3ODLogoProps {
   size?: number;
@@ -32,6 +34,17 @@ const GLOW_RADIUS: Record<NonNullable<W3ODLogoProps['glowIntensity']>, number> =
   medium: 24,
   high: 40,
 };
+
+// Hexagon "gate" mark points (pointy-top), centered at 50,50, radius 44.
+const HEX_POINTS = [
+  [50, 6],
+  [88.04, 28],
+  [88.04, 72],
+  [50, 94],
+  [11.96, 72],
+  [11.96, 28],
+];
+const hexPath = HEX_POINTS.map((p, i) => `${i === 0 ? 'M' : 'L'}${p[0]},${p[1]}`).join(' ') + ' Z';
 
 export function W3ODLogo({
   size = 120,
@@ -63,9 +76,9 @@ export function W3ODLogo({
   const glowRadius = GLOW_RADIUS[glowIntensity ?? 'medium'];
 
   return (
-    <View style={[styles.container, { width: size, height: size }, style]}>
+    <View style={[styles.container, { width: size }, style]}>
       {glowIntensity !== 'none' && (
-        <Animated.View
+        <AnimatedView
           pointerEvents="none"
           style={[
             styles.glow,
@@ -82,12 +95,27 @@ export function W3ODLogo({
           ]}
         />
       )}
-      <Image
-        source={LOGO_SOURCE}
-        style={{ width: size, height: size }}
-        resizeMode="contain"
-        accessibilityLabel="W3OD Gateway logo"
-      />
+      <Svg width={size} height={size} viewBox="0 0 100 100" accessibilityLabel="W3OD Gateway logo">
+        <Defs>
+          <RadialGradient id="w3odFill" cx="50%" cy="42%" r="62%">
+            <Stop offset="0%" stopColor="#0E2A3A" />
+            <Stop offset="100%" stopColor="#04101A" />
+          </RadialGradient>
+        </Defs>
+        <Path d={hexPath} fill="url(#w3odFill)" stroke="#00C8FF" strokeWidth={3} strokeLinejoin="round" />
+        <Circle cx="50" cy="50" r="13" fill="none" stroke="#00C8FF" strokeWidth={3} />
+        <Path d="M50 31 L50 37 M50 63 L50 69 M31 50 L37 50 M63 50 L69 50" stroke="#00C8FF" strokeWidth={3} strokeLinecap="round" />
+      </Svg>
+      {showText && (
+        <NeonText
+          variant="display"
+          weight="bold"
+          tone="cyan"
+          style={styles.text}
+        >
+          W3OD
+        </NeonText>
+      )}
     </View>
   );
 }
@@ -102,5 +130,10 @@ const styles = StyleSheet.create({
     position: 'absolute',
     backgroundColor: 'transparent',
     shadowOffset: { width: 0, height: 0 },
+  },
+  text: {
+    marginTop: 6,
+    fontSize: 18,
+    letterSpacing: 4,
   },
 });

@@ -6,6 +6,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Text,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -351,8 +352,6 @@ function PasswordRules({ password }: { password: string }) {
     </View>
   );
 }
-
-import { Text } from 'react-native';
 
 const styles = StyleSheet.create({
   scroll: {

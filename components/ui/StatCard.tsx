@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 
 import { GlassCard } from './GlassCard';
 import { NeonText } from './NeonText';
@@ -33,8 +33,6 @@ export function StatCard({ label, value, icon, tone = 'cyan', delta }: StatCardP
     </GlassCard>
   );
 }
-
-import { Text } from 'react-native';
 
 const styles = StyleSheet.create({
   card: {

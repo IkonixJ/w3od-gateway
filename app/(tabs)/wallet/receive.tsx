@@ -15,7 +15,7 @@ import { useAuth } from '@/context/AuthProvider';
 import { getMyWallet } from '@/lib/wallet-service';
 import { copyToClipboard } from '@/lib/file-utils';
 import { Palette, Typography, Spacing, Radii } from '@/design/tokens';
-import { cardMaxWidth, screenPadding } from '@/design/responsive';
+import { cardMaxWidth, screenPadding, responsive } from '@/design/responsive';
 import type { Wallet } from '@/types/wallet';
 
 export default function WalletReceiveScreen() {
@@ -168,8 +168,6 @@ export default function WalletReceiveScreen() {
     </ScreenShell>
   );
 }
-
-import { responsive } from '@/design/responsive';
 
 const styles = StyleSheet.create({
   scroll: {

@@ -12,6 +12,7 @@ import {
   Share,
   Linking,
   Platform,
+  Image,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, CalendarDays, Clock, MapPin, Users, Video, CircleCheck as CheckCircle2, Circle as XCircle, QrCode, Sparkles, Gift, ImagePlus, Trophy, UserCheck, X, Send, ExternalLink } from 'lucide-react-native';
@@ -572,8 +573,6 @@ function MetaItem({ icon, label, value }: { icon: React.ReactNode; label: string
     </View>
   );
 }
-
-import { Image } from 'react-native';
 
 const styles = StyleSheet.create({
   scroll: { flexGrow: 1, padding: screenPadding, gap: Spacing['4'], maxWidth: wideCardMaxWidth, width: '100%', alignSelf: 'center' },

@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type {
+  AnnouncementPost,
   CommunityHubData,
   DirectoryMember,
   MemberPublicProfile,
@@ -182,5 +183,4 @@ export function getInitials(name: string | null): string {
     .toUpperCase();
 }
 
-// Re-export the AnnouncementPost type here so callers don't need a separate import
-import type { AnnouncementPost } from '@/types/community';
+

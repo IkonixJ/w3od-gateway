@@ -7,6 +7,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   Text,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { CalendarDays, MapPin, Users, Clock, Plus, ChevronRight, Video, CircleCheck as CheckCircle2, Sparkles } from 'lucide-react-native';
@@ -253,9 +254,6 @@ function EventCard({ event, onPress }: { event: CommunityEvent; onPress: () => v
     </Pressable>
   );
 }
-
-// Need Image import
-import { Image } from 'react-native';
 
 const styles = StyleSheet.create({
   scroll: {
